@@ -25,15 +25,27 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
-        "command": "ruff check --fix $FILE && mypy $FILE --ignore-missing-imports",
-        "description": "Lint and type-check after every edit"
+        "matcher": {
+          "tools": ["Write", "Edit", "MultiEdit"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ruff check --fix $FILEPATH && mypy $FILEPATH --ignore-missing-imports",
+            "description": "Lint and type-check after every edit"
+          }
+        ]
       }
     ],
     "PreCommit": [
       {
-        "command": "make ci",
-        "description": "Full CI validation before any commit"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "make ci",
+            "description": "Full CI validation before any commit"
+          }
+        ]
       }
     ]
   }
