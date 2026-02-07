@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ruff check --fix \"$FILEPATH\" && mypy \"$FILEPATH\" --ignore-missing-imports",
+            "command": ".claude/hooks/lint-python.sh",
             "timeout": 30
           }
         ]

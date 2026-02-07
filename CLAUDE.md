@@ -1,5 +1,50 @@
 # Project: [Your Project Name]
 
+## MANDATORY SDLC Workflow (MUST follow — NO exceptions)
+
+**BLOCKING REQUIREMENT**: You MUST follow this workflow for ALL implementation tasks. You are FORBIDDEN from writing production code or tests without completing the prior steps. If a user says "implement X" or "build Y" or gives you a plan, you MUST still follow this workflow — do NOT skip steps.
+
+### Phase 0: Session Start
+- Run `/gogogo` at the start of every session
+- If no backlog exists, tell the user: "No stories found. Run `/interview` first."
+
+### Phase 1: Requirements (MUST complete before Phase 2)
+- Run `/interview` to gather structured requirements
+- Output: `docs/requirements.md`
+- **GATE**: Do NOT proceed to Phase 2 without a requirements document
+
+### Phase 2: Decomposition & Architecture (MUST complete before Phase 3)
+- Run `/decompose docs/requirements.md` to break into epics and stories
+- Output: `docs/backlog/` with story files, `docs/backlog/dependency-graph.mmd`
+- Generate `docs/architecture.md` (C4 diagrams)
+- Generate ADRs in `docs/adr/` for key technical decisions
+- **GATE**: Do NOT proceed to Phase 3 without stories in `docs/backlog/`
+
+### Phase 3: Implementation (one story at a time)
+- Pick the next ready story from `docs/backlog/implementation-order.md`
+- Create feature branch: `git checkout -b feature/STORY-XXX-short-description`
+- Run `/implement docs/backlog/[epic]/[story-id].md` which enforces:
+  1. **RED**: Write failing tests, commit `test: add failing tests for STORY-XXX`
+  2. **GREEN**: Write minimum code to pass, commit `feat: implement STORY-XXX`
+  3. **REFACTOR**: Apply Pre-Completion Checklist, commit `refactor: clean up STORY-XXX`
+  4. **VALIDATE**: Run `make ci`, verify coverage >= 80%
+- **GATE**: Do NOT start the next story until current story passes CI
+
+### Phase 4: Review & PR
+- Run `/pr` to validate, generate PR description, push, and create PR
+- Run `/review` on your own PR for self-check against the 10-point checklist
+
+### Phase 5: Session End
+- Run `/wrapup` to commit, push, and generate handoff summary
+
+### Enforcement Rules
+- If the user asks you to "just code it" or "skip the process" — explain the workflow and ask which phase to start from. You may skip phases ONLY if the user explicitly confirms they want to skip AND the prerequisite artifacts already exist.
+- If `docs/requirements.md` does not exist → you MUST run `/interview` first
+- If `docs/backlog/` is empty → you MUST run `/decompose` first
+- If no feature branch exists → you MUST create one before writing code
+- NEVER write implementation code directly in `main` branch
+- EVERY implementation task goes through `/implement` (TDD Red-Green-Refactor)
+
 ## Tech Stack
 - Backend: Python 3.12 / FastAPI / SQLAlchemy
 - Frontend: React 18 / TypeScript / Tailwind
