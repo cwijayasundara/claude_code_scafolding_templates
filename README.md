@@ -1,24 +1,192 @@
-# Claude Code SDLC Scaffolding
+# Claude Code SDLC Scaffolding Templates
 
-Claude Code configuration files that enforce consistent coding standards and SDLC workflow across the team. Includes 9 custom commands, 5 enforcement rules (with OWASP security), 7 domain skills, 3 sub-agents, session ceremonies (`/gogogo` + `/wrapup`), starter permissions, and a conflict resolution system.
+Production-ready Claude Code configuration that enforces consistent coding standards and a full SDLC workflow. Includes 9 slash commands, 5 enforcement rules (with OWASP security), 7 domain skills, 3 sub-agents, session ceremonies, starter permissions, and automated quality hooks.
 
-Copy the `.claude/` directory, `CLAUDE.md`, and bootstrap files into any project to get started.
+## Prerequisites
 
-## Quick Start
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
+- Python 3.12+ and `pip`
+- Git and GitHub CLI (`gh`)
+
+## Getting the Template
+
+### Option A: Clone and reinitialize (recommended for new projects)
 
 ```bash
-# Copy into your existing project
-cp CLAUDE.md pyproject.toml Makefile .env.example .gitignore /path/to/your-project/
-cp -r .claude/ /path/to/your-project/.claude/
-cp -r src/ tests/ /path/to/your-project/
+# 1. Clone the template repo
+git clone https://github.com/cwijayasundara/claude_code_scafolding_templates.git my-project
+cd my-project
 
-# Or start a new project from this scaffolding
-cp -r . my-new-project/
-cd my-new-project/
-make build  # Install dev dependencies
+# 2. Remove the template's git history and start fresh
+rm -rf .git
+git init
+git add -A
+git commit -m "feat: initial project from SDLC scaffolding template"
+
+# 3. Install dev dependencies
+make build
+
+# 4. Verify everything works
+make ci
 ```
 
-Then customize `CLAUDE.md` for your project (set project name, tech stack, commands).
+### Option B: Copy into an existing project
+
+```bash
+# 1. Clone the template to a temporary location
+git clone https://github.com/cwijayasundara/claude_code_scafolding_templates.git /tmp/sdlc-template
+
+# 2. Copy the files you need into your project
+cp /tmp/sdlc-template/CLAUDE.md /path/to/your-project/
+cp -r /tmp/sdlc-template/.claude/ /path/to/your-project/.claude/
+cp -r /tmp/sdlc-template/.github/ /path/to/your-project/.github/
+
+# 3. Optionally copy bootstrap files (skip any you already have)
+cp /tmp/sdlc-template/pyproject.toml /path/to/your-project/
+cp /tmp/sdlc-template/Makefile /path/to/your-project/
+cp /tmp/sdlc-template/.env.example /path/to/your-project/
+cp /tmp/sdlc-template/.gitignore /path/to/your-project/
+cp /tmp/sdlc-template/Dockerfile /path/to/your-project/
+cp -r /tmp/sdlc-template/src/ /path/to/your-project/src/
+cp -r /tmp/sdlc-template/tests/ /path/to/your-project/tests/
+
+# 4. Clean up
+rm -rf /tmp/sdlc-template
+```
+
+### Option C: Download without git history
+
+```bash
+# Download and extract (no git history)
+gh repo clone cwijayasundara/claude_code_scafolding_templates my-project -- --depth=1
+cd my-project && rm -rf .git
+```
+
+## Post-Setup: What to Customize
+
+After cloning, you **must** update these files for your project:
+
+### 1. `CLAUDE.md` (required)
+
+Open `CLAUDE.md` and update:
+
+```markdown
+# Project: [Your Project Name]       <-- Replace with your project name
+
+## Tech Stack
+- Backend: Python 3.12 / FastAPI     <-- Adjust to your actual stack
+```
+
+Also update the `## Commands` section if your `make` targets differ.
+
+### 2. `pyproject.toml` (required)
+
+```toml
+[project]
+name = "my-project"                   # <-- Your project name
+version = "0.1.0"
+description = "Your project description"  # <-- Your description
+dependencies = []                     # <-- Add your runtime dependencies
+```
+
+The linting (`ruff`), type-checking (`mypy`), and test (`pytest`) configurations are pre-configured and ready to use.
+
+### 3. `.env.example` (required)
+
+Update with the environment variables your project actually needs:
+
+```bash
+# Replace the example variables with your own
+YOUR_API_KEY=your-key-here
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+```
+
+Then create your local `.env` from it:
+
+```bash
+cp .env.example .env
+# Edit .env with real values (never committed — already in .gitignore)
+```
+
+### 4. `.claude/settings.json` (optional)
+
+The starter permissions pre-approve common dev commands so Claude Code doesn't prompt you for each one. Review and adjust:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(pytest *)",
+      "Bash(make *)",
+      "Bash(git *)"
+    ]
+  }
+}
+```
+
+Add or remove commands to match your stack (e.g., add `"Bash(cargo *)"` for Rust).
+
+### 5. `.claude/skills/` (optional)
+
+Keep the skills relevant to your stack, delete the rest:
+
+```bash
+# Example: remove skills you don't need
+rm -rf .claude/skills/react-frontend/       # No frontend
+rm -rf .claude/skills/langgraph-agents/     # No LangGraph
+rm -rf .claude/skills/deployment/           # Custom deployment
+```
+
+Add new skills by creating `.claude/skills/<name>/SKILL.md` with YAML frontmatter.
+
+### 6. `.github/workflows/` (optional)
+
+The CI workflow (`ci.yml`) runs `ruff`, `mypy`, unit tests, integration tests, and coverage checks on every push/PR. Update `release.yml` to match your Docker image name and registry.
+
+## Using the Template with Claude Code
+
+Once set up, open your project in a terminal and launch Claude Code:
+
+```bash
+cd my-project
+claude
+```
+
+Claude Code automatically reads `CLAUDE.md` and `.claude/` on startup. The rules, skills, and commands are immediately available.
+
+### Start a Session
+
+```
+/gogogo
+```
+
+This loads project context, checks git status, shows your backlog, and suggests what to work on next. **Always start here.**
+
+### The Development Cycle
+
+```
+/interview                              # 1. Gather requirements (optional)
+/decompose docs/requirements.md         # 2. Break into stories
+/implement docs/backlog/<story>.md      # 3. TDD: Red -> Green -> Refactor
+/pr                                     # 4. Run CI + create pull request
+/review 42                              # 5. Review PR #42
+/wrapup                                 # 6. Commit, push, handoff summary
+```
+
+### Between Stories
+
+```
+/clear                                  # Reset context window between stories
+/compact                                # Compress context during long sessions
+```
+
+### Other Commands
+
+```
+/diagnose <failure-output>              # Diagnose test failures, create hotfix
+/create-prompt                          # Build structured prompt (R.G.C.O.A.)
+```
 
 ## What's Included
 
@@ -29,6 +197,8 @@ pyproject.toml                           # Ruff, mypy, pytest config (pre-config
 Makefile                                 # All build/test/deploy targets
 .env.example                             # Environment variable template
 .gitignore                               # Python, Node, IDE, OS ignores
+Dockerfile                               # Multi-stage Python 3.12 build
+.dockerignore                            # Lean Docker context
 
 src/                                     # Source code directory (stub)
   __init__.py
@@ -41,11 +211,10 @@ tests/                                   # Test directories with markers
   e2e/
 
 .claude/
-  settings.json                          # Hooks + starter permissions (pre-approved
-                                         # safe commands to reduce permission popups)
+  settings.json                          # Hooks + starter permissions
   rules/
-    security.md                          # Secrets, input validation, SQL injection, auth
-    code-style.md                        # Structure, size, constants, type safety
+    security.md                          # Secrets, input validation, SQL injection
+    code-style.md                        # Size limits, constants, type safety
     error-handling.md                    # try/except, logging, specific exceptions
     testing.md                           # TDD, fixtures, coverage, mock rules
     git-workflow.md                      # Branch naming, conventional commits
@@ -70,12 +239,59 @@ tests/                                   # Test directories with markers
     deployment/SKILL.md                  # Docker, Azure App Service, rollback
     langgraph-agents/SKILL.md            # LangGraph ReAct agents, tools, state
     react-frontend/SKILL.md             # React 18 + TypeScript, streaming UI
-    claude-agent-teams/SKILL.md          # Opus 4.6 agent teams, tool_use, caching
+    claude-agent-teams/SKILL.md          # Claude agent teams, tool_use, caching
+
+.github/
+  workflows/
+    ci.yml                               # Lint + test on push/PR
+    release.yml                          # Docker build on tag
 
 claude-code-sdlc-framework-v2.md         # Framework theory and design rationale
 ```
 
-## Tech Stack
+## How the Enforcement Layers Work
+
+The template uses a layered approach — each layer catches different issues at different times:
+
+| Layer | What It Does | When It Runs |
+|-------|-------------|--------------|
+| **Starter Permissions** | Pre-approves safe commands (python, pytest, make, git, etc.) | Every tool call |
+| **PostToolUse Hook** | Runs `ruff check --fix` + `mypy` after every file edit | Automatic, after Write/Edit |
+| **PreCommit Hook** | Runs `make ci` (lint + all tests) before every git commit | Automatic, before commit |
+| **Rules** | BAD/GOOD examples for security, code style, error handling, testing, git | Auto-loaded by file path |
+| **CLAUDE.md** | Standards summary, Pre-Completion Checklist, precedence rules | Read every session |
+| **Commands** | Slash commands for the full SDLC workflow | Invoked by user |
+| **Agents** | Specialized sub-agents (test-writer, code-reviewer, architect) | Called by commands |
+| **Skills** | Domain knowledge (API design, DB patterns, deployment, etc.) | Referenced as needed |
+
+### Precedence (when rules conflict)
+
+1. Security rules (always win)
+2. Error handling rules
+3. Code style rules
+4. Testing rules
+5. Git workflow rules
+6. Skill recommendations (advisory)
+
+## Make Targets
+
+```bash
+make help               # Show all targets with descriptions
+make build              # Install project + dev dependencies
+make lint               # Run ruff + mypy
+make format             # Auto-fix lint issues
+make test-unit          # Run unit tests with coverage
+make test-integration   # Run integration tests
+make test-e2e           # Run end-to-end tests
+make test               # Run unit + integration (default CI suite)
+make ci                 # Full CI: lint + test (used by pre-commit hook)
+make deploy-staging     # Deploy to Azure staging slot (configure first)
+make deploy-production  # Swap staging to production
+```
+
+## Default Tech Stack
+
+The template is pre-configured for this stack, but every part is customizable:
 
 | Layer | Technologies |
 |-------|-------------|
@@ -86,203 +302,22 @@ claude-code-sdlc-framework-v2.md         # Framework theory and design rationale
 | Testing | pytest, Playwright, Locust, Schemathesis |
 | CI/CD | GitHub Actions |
 
-## The SDLC Workflow
+## Context Management Tips
 
-### 0. Start Session
+Claude Code's context window fills up during long sessions. Follow these practices:
 
-```
-/gogogo
-```
-
-Loads project context, checks git status, shows ready work from backlog, and suggests what to work on next.
-
-### 1. Interview (Optional)
-
-For features without a written spec:
-
-```
-/interview
-```
-
-Claude asks 5-8 structured questions and produces `docs/requirements.md`.
-
-### 2. Decompose Requirements
-
-```
-/decompose docs/requirements.md
-```
-
-Generates user stories with acceptance criteria, a dependency graph, and implementation order.
-
-### 3. Implement with TDD
-
-For each story in dependency order:
-
-```
-/implement docs/backlog/<epic>/<story>.md
-```
-
-Runs the TDD cycle: RED (failing tests) -> GREEN (make them pass) -> REFACTOR (Pre-Completion Checklist).
-
-### 4. Create PR
-
-```
-/pr
-```
-
-### 5. Review
-
-```
-/review <pr-number>
-```
-
-### 6. Wrap Up Session
-
-```
-/wrapup
-```
-
-Commits changes, runs CI, pushes to remote, and generates a handoff summary for the next session.
-
-## Context Management
-
-Claude Code's context window fills up fast, and performance degrades as it fills. Follow these practices to stay efficient:
-
-### Session Lifecycle
-- Start every session with `/gogogo` — loads context, shows backlog, suggests next action
-- End every session with `/wrapup` — commits, pushes, provides handoff summary for the next session
-- This ensures clean handoffs between sessions and no "cold start" confusion
-
-### Between Stories
-- Run `/clear` after completing each story to reset the context window
-- This prevents stale context from one story affecting the next
-
-### During Long Implementation
-- Use `/compact` when you notice Claude's responses getting less focused
-- Add compaction instructions to CLAUDE.md so Claude knows what to preserve:
-  - Modified files list
-  - Current story context and acceptance criteria
-  - Test commands and any failing test output
-
-### Subagents for Investigation
-- Use subagents (test-writer, code-reviewer, architect) for codebase investigation
-- Subagents run in their own context — they don't pollute the main conversation
-- Good for: searching code patterns, reading multiple files, analyzing dependencies
-
-### Interview Before Decompose
-- For larger features, run `/interview` first to let Claude ask clarifying questions
-- This produces a focused requirements summary before running `/decompose`
-- Avoids wasting context on back-and-forth about requirements
-
-## Enforcement Layers
-
-| Layer | What | When |
-|-------|------|------|
-| **Starter Permissions** | Pre-approved safe commands (python, pytest, ruff, mypy, make, git, etc.) | Reduces permission popups |
-| **Hooks** (automatic) | `ruff + mypy` after every file edit; `make ci` before every commit | Cannot be skipped |
-| **CLAUDE.md** (advisory) | Standards summary, Pre-Completion Checklist, precedence rules, context management | Claude reads on every session |
-| **Rules** (modular) | BAD/GOOD examples in `.claude/rules/` (security, code-style, error-handling, testing, git) | Auto-loaded per path |
-| **Commands** (workflow) | `/gogogo` + `/wrapup` ceremonies; `/implement` TDD; `/review` quality; `/create-prompt` | Invoked per session/story |
-| **Agents** (specialized) | test-writer, code-reviewer, architect | Called by commands |
-| **Skills** (knowledge) | 7 domain skills with YAML frontmatter (API, DB, testing, deployment, LangGraph, React, Claude agents) | Referenced as needed |
-
-## Rules Reference
-
-Rules are auto-loaded based on file path and enforced in precedence order (highest first):
-
-| Rule | Scope | What It Covers |
-|------|-------|---------------|
-| **security** | `src/**/*.py` | No secrets in code, input validation, SQL injection, auth, HTTPS, error responses, path safety |
-| **code-style** | `**/*.py`, `**/*.ts`, `**/*.tsx` | Structure, size limits (30 lines/fn, 300 lines/file), constants, type safety, no duplication |
-| **error-handling** | `src/**/*.py` | try/except for external calls, specific exceptions, logging, no print() |
-| **testing** | `tests/**/*.py` | TDD workflow, shared fixtures, descriptive names, mock-at-boundaries, 80% coverage |
-| **git-workflow** | all | Branch naming, conventional commits, squash merge, one story per branch |
-
-## Commands Reference
-
-| Command | Purpose |
-|---------|---------|
-| `/gogogo` | Session startup — load context, check git, show backlog, suggest next action |
-| `/interview` | Requirements gathering via structured questions |
-| `/decompose` | Break requirements into epics, stories, dependency graph |
-| `/implement` | TDD Red-Green-Refactor cycle for a story |
-| `/pr` | Run CI, generate PR description, create PR |
-| `/review` | Review a PR against 10-point quality checklist |
-| `/diagnose` | Diagnose test failures and create hotfix |
-| `/wrapup` | Session completion — commit, CI, push, handoff summary |
-| `/create-prompt` | Build structured prompts using R.G.C.O.A. framework |
-
-## Skills Reference
-
-| Skill | What It Covers |
-|-------|---------------|
-| **api-design** | REST conventions, Pydantic schemas, RFC 7807 errors, pagination |
-| **database-patterns** | Repository pattern, async SQLAlchemy, Alembic migrations, N+1 prevention |
-| **testing** | TDD workflow, pytest fixtures, factory pattern, mock-at-boundaries |
-| **deployment** | Docker multi-stage, Azure App Service, deployment slots, Key Vault, rollback |
-| **langgraph-agents** | ReAct agents, StateGraph, tool factories, checkpointing, multi-agent handoffs, deep agents |
-| **react-frontend** | React 18 + TypeScript, component patterns, streaming UI for agents, TanStack Query, Tailwind |
-| **claude-agent-teams** | Opus 4.6 tool_use, extended thinking, prompt caching, multi-model orchestration, agent SDK |
-
-## Customization
-
-### CLAUDE.md
-
-Edit the following sections for your project:
-- **Project name and tech stack** at the top
-- **Commands section** — update `make` targets to match your build system
-- **Code Standards** — adjust rules to your team's preferences (line length, coverage threshold, etc.)
-
-### pyproject.toml
-
-Pre-configured with:
-- `ruff` (linting + formatting, line-length 100)
-- `mypy` (strict mode)
-- `pytest` (markers for unit/integration/e2e/smoke/perf, 80% coverage threshold)
-
-### .claude/settings.json
-
-Includes two sections:
-
-**Starter permissions** — Pre-approved commands that won't trigger permission prompts during normal development (python, pytest, ruff, mypy, make, git, gh, node, npm, docker, az, mkdir, ls). Add or remove commands to match your stack.
-
-**Hooks** — The hooks assume your project has:
-- `ruff` and `mypy` installed (for PostToolUse lint hook)
-- A `make ci` target (for PreCommit hook)
-
-Update the hook commands if your project uses different tools:
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(python3 *)",
-      "Bash(pytest *)",
-      "Bash(make *)"
-    ]
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "command": "your-lint-command $FILE",
-        "description": "Lint and type-check after every edit"
-      }
-    ],
-    "PreCommit": [
-      {
-        "command": "your-ci-command",
-        "description": "Full CI validation before any commit"
-      }
-    ]
-  }
-}
-```
-
-### Skills
-
-Skills contain domain knowledge. Keep the ones relevant to your stack, remove the rest, or add new ones by creating `.claude/skills/<name>/SKILL.md`. All skills have YAML frontmatter with `name` and `description` for auto-discovery.
+- **Start/end ceremony**: `/gogogo` at start, `/wrapup` at end — clean handoffs between sessions
+- **Clear between stories**: `/clear` after completing each story to reset context
+- **Compact when needed**: `/compact` during long sessions to reclaim space while preserving key state
+- **Delegate investigation**: Use sub-agents (test-writer, code-reviewer, architect) for codebase exploration — they don't pollute main context
+- **Interview first**: For large features, `/interview` before `/decompose` to avoid requirements back-and-forth
 
 ## Reference
 
-See `claude-code-sdlc-framework-v2.md` for the full framework theory and design rationale behind the enforcement layers, commands, agents, and skills.
+| Resource | Description |
+|----------|-------------|
+| `CLAUDE.md` | Code standards, commands, and Pre-Completion Checklist |
+| `.claude/rules/` | Detailed BAD/GOOD examples for each rule category |
+| `.claude/skills/` | Domain knowledge documents with YAML frontmatter |
+| `claude-code-sdlc-framework-v2.md` | Full framework theory and design rationale |
+| [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) | Official Claude Code documentation |
