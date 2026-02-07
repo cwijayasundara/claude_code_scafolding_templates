@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(pip3 *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(make *)",
+      "Bash(make)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(docker *)",
+      "Bash(az *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(ls)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "command": "ruff check --fix $FILE && mypy $FILE --ignore-missing-imports",
+        "description": "Lint and type-check after every edit"
+      }
+    ],
+    "PreCommit": [
+      {
+        "command": "make ci",
+        "description": "Full CI validation before any commit"
+      }
+    ]
+  }
+}

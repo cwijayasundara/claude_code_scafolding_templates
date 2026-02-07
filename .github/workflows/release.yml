@@ -1,0 +1,15 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t deep-research-agent:${{ github.ref_name }} .
+      - name: Tag as latest
+        run: docker tag deep-research-agent:${{ github.ref_name }} deep-research-agent:latest

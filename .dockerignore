@@ -1,0 +1,14 @@
+tests/
+docs/
+.git/
+.env
+.env.local
+.github/
+.claude/
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+*.md
+!README.md
+output/
+scripts/
