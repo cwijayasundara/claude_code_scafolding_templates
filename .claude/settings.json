@@ -22,6 +22,13 @@
       "Bash(ls)"
     ]
   },
+  "env": {
+    "AGENT_TEAMS_ENABLED": "false",
+    "AGENT_TEAMS_ENFORCE": "false",
+    "AGENT_TEAMS_MAX_TEAMMATES": "3",
+    "AGENT_TEAMS_WORKTREE_DIR": ".worktrees",
+    "AGENT_TEAMS_AUTO_CLEANUP": "true"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -30,6 +37,11 @@
           {
             "type": "command",
             "command": ".claude/hooks/sdlc-gate.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/worktree-guard.sh",
             "timeout": 10
           }
         ]
@@ -53,6 +65,33 @@
             "type": "command",
             "command": ".claude/hooks/lint-python.sh",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/lint-frontend.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/teammate-idle.sh",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/teammate-completed.sh",
+            "timeout": 120
           }
         ]
       }

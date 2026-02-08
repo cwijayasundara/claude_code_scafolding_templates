@@ -6,12 +6,28 @@ Follow the TDD Red → Green → Refactor cycle:
 
 ## Phase 1: RED (Failing Tests)
 1. Read the story's acceptance criteria
-2. Read the test plan at docs/test-plans/[story-id]-test-plan.md (if exists)
+2. Read the test plan at `docs/test-plans/[story-id]-test-plan.md`
+   - If the test plan does NOT exist, generate it first: run `/test-plan [story-file]`
 3. Spawn the test-writer sub-agent to write failing tests:
-   - Unit tests in tests/unit/ (mock external dependencies)
-   - Integration tests in tests/integration/ (real components, mock external APIs)
-4. Verify ALL new tests FAIL (they must — no implementation yet)
-5. Commit: `test: add failing tests for [STORY-ID]`
+   - Unit tests in `tests/unit/` (mock external dependencies)
+   - Integration tests in `tests/integration/` (real components, mock external APIs)
+   - Use the test plan's **Test Data** section to create factories and fixtures
+4. If the story has `frontend` or `fullstack` expertise tag:
+   - Write E2E test scripts in `tests/e2e/` using Playwright
+   - Use the test plan's **E2E Tests** section for scenarios
+   - Playwright MCP server is configured in `.mcp.json` — use it to validate selectors and user flows
+   - E2E test structure:
+     ```python
+     @pytest.mark.e2e
+     async def test_<user_journey>_<expected>(page: Page):
+         """Given <pre-condition>, when <user actions>, then <assertion>."""
+         await page.goto(f"{BASE_URL}/path")
+         await page.fill("[data-testid=field]", "value")
+         await page.click("[data-testid=submit]")
+         await expect(page.locator("[data-testid=result]")).to_be_visible()
+     ```
+5. Verify ALL new tests FAIL (they must — no implementation yet)
+6. Commit: `test: add failing tests for [STORY-ID]`
 
 ## Phase 2: GREEN (Minimum Implementation)
 1. Read the failing tests — they define EXACTLY what to implement

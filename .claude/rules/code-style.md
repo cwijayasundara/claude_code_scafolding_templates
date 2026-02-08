@@ -3,7 +3,8 @@
 Applies to: `**/*.py`, `**/*.ts`, `**/*.tsx`
 
 ## Structure & Size
-- Max function length: 30 lines. Max file length: 300 lines
+- Max function length: 50 lines. Max file length: 500 lines
+- Test files may exceed 500 lines if well-organized with section comments separating test groups; split at 700+ lines
 - All public functions must have docstrings/JSDoc
 - Single Responsibility: each function does ONE thing
 - BAD: a `main()` that parses args, loads config, initializes services, runs logic, AND prints output
@@ -25,6 +26,24 @@ Applies to: `**/*.py`, `**/*.ts`, `**/*.tsx`
 - GOOD: shared `@pytest.fixture` in `tests/conftest.py` that all test files use
 - BAD: two functions with identical logic but different parameter names
 - GOOD: one function with parameters, called from both places
+
+## No Dead Code (MANDATORY)
+- No unused imports, variables, or functions — delete them, don't comment them out
+- No commented-out code — use git history to recover old code if needed
+- No placeholder functions with `pass`, empty stubs, or `// TODO` implementations that do nothing
+
+### Python
+- BAD: `import os` when `os` is never used
+- BAD: `# result = old_function(data)` — commented-out call left in source
+- BAD: `def process_legacy(data): pass` — empty stub never called
+- GOOD: Remove unused imports, delete dead functions, use git to find old code
+
+### TypeScript / React
+- BAD: `import { useState } from 'react'` when `useState` is never used
+- BAD: `const oldHandler = () => { /* deprecated */ }` — dead function left in source
+- BAD: `// const result = await fetchData(id);` — commented-out code
+- GOOD: Remove unused imports, delete dead components, enable `noUnusedLocals` in tsconfig
+- Enable `noUnusedLocals` and `noUnusedParameters` in `tsconfig.json` to catch dead code at compile time
 
 ## Constants
 - All literal values used as identifiers, limits, formats, or configuration MUST be named constants

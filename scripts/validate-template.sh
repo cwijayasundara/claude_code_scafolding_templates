@@ -88,7 +88,7 @@ echo ""
 
 # ---- 5. Custom commands exist ----
 echo "5. Custom commands"
-for cmd in gogogo interview decompose implement pr review diagnose wrapup; do
+for cmd in gogogo interview decompose test-plan implement parallel-manual parallel-implement pr review diagnose wrapup; do
   if [[ -f ".claude/commands/$cmd.md" ]]; then
     pass "/$ $cmd command exists"
   else
@@ -147,6 +147,119 @@ if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then
   pass "Gate 3 would BLOCK: on $BRANCH branch (correct — forces feature branch)"
 else
   warn "Gate 3 would PASS: on branch '$BRANCH'"
+fi
+echo ""
+
+# ---- 9. Agent teams configuration ----
+echo "9. Agent teams (parallel implementation)"
+if [[ -f ".claude/commands/parallel-implement.md" ]]; then
+  pass "/parallel-implement command exists"
+else
+  fail "/parallel-implement command missing"
+fi
+if [[ -f ".claude/commands/parallel-manual.md" ]]; then
+  pass "/parallel-manual command exists"
+else
+  fail "/parallel-manual command missing"
+fi
+for hook in .claude/hooks/worktree-guard.sh .claude/hooks/teammate-completed.sh .claude/hooks/teammate-idle.sh; do
+  if [[ -f "$hook" ]]; then
+    pass "$hook exists"
+    if [[ -x "$hook" ]]; then
+      pass "$hook is executable"
+    else
+      fail "$hook is NOT executable — run: chmod +x $hook"
+    fi
+  else
+    fail "$hook missing"
+  fi
+done
+if [[ -f ".claude/settings.json" ]]; then
+  TEAMS_ENABLED=$(jq -r '.env.AGENT_TEAMS_ENABLED // "not set"' .claude/settings.json 2>/dev/null)
+  if [[ "$TEAMS_ENABLED" == "true" ]]; then
+    warn "Agent teams ENABLED in settings — experimental feature is active"
+  elif [[ "$TEAMS_ENABLED" == "false" ]]; then
+    pass "Agent teams disabled in settings (default — enable with AGENT_TEAMS_ENABLED=true)"
+  else
+    warn "Agent teams config not found in settings.json env block"
+  fi
+  TEAMS_ENFORCE=$(jq -r '.env.AGENT_TEAMS_ENFORCE // "not set"' .claude/settings.json 2>/dev/null)
+  if [[ "$TEAMS_ENFORCE" == "true" ]]; then
+    warn "Agent teams ENFORCE mode is ON — Claude will require /parallel-implement for multi-story waves"
+  elif [[ "$TEAMS_ENFORCE" == "false" ]]; then
+    pass "Agent teams enforce mode off (default — sequential /implement used)"
+  else
+    warn "AGENT_TEAMS_ENFORCE not found in settings.json env block"
+  fi
+  if grep -q "worktree-guard.sh" .claude/settings.json; then
+    pass "worktree-guard.sh wired in settings"
+  else
+    fail "worktree-guard.sh not referenced in settings"
+  fi
+  if grep -q "teammate-completed.sh" .claude/settings.json; then
+    pass "teammate-completed.sh wired in settings"
+  else
+    fail "teammate-completed.sh not referenced in settings"
+  fi
+  if grep -q "teammate-idle.sh" .claude/settings.json; then
+    pass "teammate-idle.sh wired in settings"
+  else
+    fail "teammate-idle.sh not referenced in settings"
+  fi
+  if grep -q "TeammateIdle" .claude/settings.json; then
+    pass "TeammateIdle hook event configured"
+  else
+    fail "TeammateIdle hook event missing — idle teammates won't be validated"
+  fi
+fi
+if grep -q ".worktrees/" .gitignore 2>/dev/null; then
+  pass ".worktrees/ in .gitignore"
+else
+  fail ".worktrees/ not in .gitignore — worktrees would be tracked"
+fi
+echo ""
+
+# ---- 10. MCP and Playwright configuration ----
+echo "10. MCP and Playwright configuration"
+if [[ -f ".mcp.json" ]]; then
+  pass ".mcp.json exists"
+  if grep -q "playwright" .mcp.json; then
+    pass "Playwright MCP server configured in .mcp.json"
+  else
+    warn "Playwright MCP server not found in .mcp.json — E2E test automation unavailable"
+  fi
+  if grep -q "@playwright/mcp" .mcp.json; then
+    pass "@playwright/mcp package referenced"
+  else
+    warn "@playwright/mcp package not referenced"
+  fi
+else
+  warn ".mcp.json missing — MCP servers not configured (Playwright E2E unavailable)"
+fi
+if [[ -f ".claude/commands/test-plan.md" ]]; then
+  pass "/test-plan command exists"
+else
+  fail "/test-plan command missing — test plans won't be generated from stories"
+fi
+if grep -q "test-plan" .claude/commands/decompose.md 2>/dev/null; then
+  pass "/decompose references /test-plan for automatic test plan generation"
+else
+  warn "/decompose does not reference /test-plan — test plans must be generated manually"
+fi
+if grep -q "E2E" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement includes E2E test phase"
+else
+  warn "/implement does not reference E2E tests"
+fi
+if grep -q "Playwright" .claude/skills/testing/SKILL.md 2>/dev/null; then
+  pass "Testing skill includes Playwright E2E patterns"
+else
+  warn "Testing skill missing Playwright E2E patterns"
+fi
+if grep -q "e2e" .claude/agents/test-writer.yaml 2>/dev/null; then
+  pass "Test-writer agent supports E2E tests"
+else
+  warn "Test-writer agent does not reference E2E tests"
 fi
 echo ""
 
