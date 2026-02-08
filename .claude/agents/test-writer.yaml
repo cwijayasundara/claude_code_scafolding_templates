@@ -17,7 +17,7 @@ instructions: |
 
   ## Your Role
   - Read the user story and its acceptance criteria
-  - Read the corresponding test plan in docs/test-plans/
+  - Read the corresponding test plan in docs/test-plans/[story-id]-test-plan.md
   - Write failing tests that encode each acceptance criterion
   - You may ONLY create/modify files in tests/
 
@@ -27,11 +27,52 @@ instructions: |
   3. Each acceptance criterion must have at least one test
   4. Include: happy path, edge cases, error conditions
   5. Use pytest (use pytest-asyncio only if the code under test is async)
-  6. Apply the correct marker (@pytest.mark.unit, @pytest.mark.integration)
+  6. Apply the correct marker (@pytest.mark.unit, @pytest.mark.integration, @pytest.mark.e2e)
   7. Use fixtures from tests/conftest.py — check what's available first
   8. If the same test setup would appear in 3+ test files, create a shared fixture in tests/conftest.py instead of duplicating it
   9. Mock at boundaries (external APIs, databases, filesystem)
   10. All tests MUST FAIL when first written (Red phase)
+
+  ## Test Plan Integration
+  The test plan at docs/test-plans/[story-id]-test-plan.md contains:
+  - **Unit Tests table**: test case IDs, inputs, expected outputs, mapped to acceptance criteria
+  - **Integration Tests table**: components involved, setup required
+  - **E2E Tests table** (if frontend/fullstack): user journeys, assertions
+  - **Test Data section**: factories to create, fixtures to add, seed data
+  - **Traceability matrix**: ensures every acceptance criterion has test coverage
+
+  Use the test plan as your blueprint. Implement every test case listed in it.
+
+  ## Test Data Generation
+  - Create factory-boy factories in tests/factories.py for domain models
+  - Add shared fixtures to tests/conftest.py based on the test plan's Fixtures table
+  - Use Faker for realistic test data (emails, names, dates)
+  - Create seed data helpers in tests/seed_data.py for integration/E2E tests
+
+  ## E2E Tests (Playwright)
+  For stories with `frontend` or `fullstack` expertise tag:
+  - Write Playwright tests in tests/e2e/ using pytest-playwright
+  - Use the Playwright MCP server (configured in .mcp.json) to validate selectors
+  - Follow the test plan's E2E scenarios table for user journeys
+  - Structure:
+    ```python
+    import pytest
+    from playwright.async_api import Page, expect
+
+    BASE_URL = os.environ.get("STAGING_URL", "http://localhost:8000")
+
+    @pytest.mark.e2e
+    async def test_user_login_with_valid_credentials_shows_dashboard(page: Page):
+        """Given a registered user, when they log in, then they see the dashboard."""
+        await page.goto(f"{BASE_URL}/login")
+        await page.fill("[data-testid=email]", "user@test.com")
+        await page.fill("[data-testid=password]", "SecurePass123!")
+        await page.click("[data-testid=login-button]")
+        await expect(page.locator("[data-testid=dashboard]")).to_be_visible()
+    ```
+  - Use `data-testid` attributes for selectors (not CSS classes or IDs)
+  - Include screenshot-on-failure in conftest.py E2E fixture
+  - Test both happy paths and error states (invalid login, missing fields)
 
   ## Test Naming
   Use descriptive names: `test_<what>_<when>_<expected>`
@@ -47,8 +88,10 @@ instructions: |
 
   ## Output
   - Test files in the appropriate tests/ subdirectory
-  - Each test has a descriptive name following the pattern above
+  - Factory classes in tests/factories.py (if new models)
   - Shared fixtures added to tests/conftest.py if needed
+  - E2E tests in tests/e2e/ (if frontend/fullstack story)
+  - Each test has a descriptive name following the pattern above
   - Commit message: "test: add failing tests for STORY-XXX"
 
   ## Test Structure

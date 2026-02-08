@@ -137,6 +137,122 @@ class UserFactory(factory.Factory):
 - Focus coverage on business logic (services), not boilerplate
 - Use `# pragma: no cover` sparingly and only for truly unreachable code
 
+## Test Plan Generation
+
+Before writing tests, generate a test plan using `/test-plan docs/backlog/[epic]/[story-id].md`.
+
+The test plan (`docs/test-plans/[story-id]-test-plan.md`) provides:
+- Test case tables with IDs mapped to acceptance criteria
+- Test data requirements (factories, fixtures, seed data)
+- E2E scenarios for frontend/fullstack stories
+- Mocking strategy per test type
+- Traceability matrix (every acceptance criterion → test cases)
+
+The test-writer agent uses this plan during the RED phase of `/implement`.
+
+## Test Data Generation
+
+### Factory Pattern (factory-boy)
+Create reusable factories for domain models in `tests/factories.py`:
+
+```python
+import factory
+from faker import Faker
+
+fake = Faker()
+
+class UserFactory(factory.Factory):
+    class Meta:
+        model = UserCreate
+    email = factory.Sequence(lambda n: f"user{n}@test.com")
+    password = "SecurePass123!"
+    name = factory.Faker("name")
+
+class OrderFactory(factory.Factory):
+    class Meta:
+        model = OrderCreate
+    user_id = factory.LazyAttribute(lambda o: fake.uuid4())
+    total = factory.LazyFunction(lambda: round(fake.pyfloat(min_value=1, max_value=1000), 2))
+    status = "pending"
+```
+
+### Seed Data for Integration/E2E
+Create seed data helpers in `tests/seed_data.py`:
+
+```python
+async def seed_test_users(session: AsyncSession) -> list[User]:
+    """Create a set of test users with different roles."""
+    users = [
+        User(email="admin@test.com", role="admin"),
+        User(email="user@test.com", role="user"),
+        User(email="viewer@test.com", role="viewer"),
+    ]
+    session.add_all(users)
+    await session.commit()
+    return users
+```
+
+## E2E Testing with Playwright
+
+### Setup
+- Playwright MCP server is configured in `.mcp.json` at project root
+- Install: `pip install pytest-playwright && playwright install chromium`
+- MCP server allows Claude to validate selectors and test user flows interactively
+
+### Playwright Conftest Fixture
+```python
+# tests/e2e/conftest.py
+import pytest
+from playwright.async_api import Page
+
+BASE_URL = os.environ.get("STAGING_URL", "http://localhost:8000")
+
+@pytest.fixture
+async def authenticated_page(page: Page, sample_user):
+    """A page logged in as sample_user."""
+    await page.goto(f"{BASE_URL}/login")
+    await page.fill("[data-testid=email]", sample_user.email)
+    await page.fill("[data-testid=password]", "SecurePass123!")
+    await page.click("[data-testid=login-button]")
+    await page.wait_for_url(f"{BASE_URL}/dashboard")
+    yield page
+
+@pytest.fixture
+async def screenshot_on_failure(page: Page, request):
+    """Capture screenshot on test failure."""
+    yield
+    if request.node.rep_call.failed:
+        await page.screenshot(path=f"tests/e2e/screenshots/{request.node.name}.png")
+```
+
+### E2E Test Structure
+```python
+@pytest.mark.e2e
+async def test_user_creates_order_and_sees_confirmation(authenticated_page: Page):
+    """Given a logged-in user, when they create an order, then they see confirmation."""
+    page = authenticated_page
+    await page.click("[data-testid=new-order-button]")
+    await page.fill("[data-testid=item-name]", "Test Item")
+    await page.fill("[data-testid=quantity]", "2")
+    await page.click("[data-testid=submit-order]")
+    await expect(page.locator("[data-testid=order-confirmation]")).to_be_visible()
+    await expect(page.locator("[data-testid=order-status]")).to_have_text("Confirmed")
+```
+
+### Selector Strategy
+- Use `data-testid` attributes (not CSS classes or element IDs)
+- BAD: `page.click(".btn-primary")` (fragile, changes with styling)
+- GOOD: `page.click("[data-testid=submit-button]")` (stable, intent-clear)
+- Use the Playwright MCP server to discover and validate selectors interactively
+
+### Running E2E Tests
+```bash
+make test-e2e                    # Run all E2E tests
+pytest tests/e2e/ -m e2e -k "login"  # Run specific E2E test
+pytest tests/e2e/ --headed       # Run with visible browser
+pytest tests/e2e/ --tracing on   # Record trace for debugging
+```
+
 ## Running Tests
 ```bash
 make test-unit          # Fast, mocked, runs on every change

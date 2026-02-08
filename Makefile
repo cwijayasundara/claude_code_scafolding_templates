@@ -3,7 +3,7 @@
 # Customize commands for your build system as needed.
 # ============================================================
 
-.PHONY: help build lint test test-unit test-integration test-e2e test-smoke test-perf ci deploy-staging deploy-production
+.PHONY: help build lint test test-unit test-integration test-e2e test-e2e-headed test-e2e-trace test-smoke test-perf ci deploy-staging deploy-production
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -33,8 +33,14 @@ test-unit: ## Run unit tests (fast, mocked)
 test-integration: ## Run integration tests (real components)
 	pytest tests/integration/ -m integration
 
-test-e2e: ## Run end-to-end tests (deployed service)
+test-e2e: ## Run end-to-end tests (deployed service, Playwright)
 	pytest tests/e2e/ -m e2e
+
+test-e2e-headed: ## Run E2E tests with visible browser
+	pytest tests/e2e/ -m e2e --headed
+
+test-e2e-trace: ## Run E2E tests with trace recording
+	pytest tests/e2e/ -m e2e --tracing on
 
 test-smoke: ## Run smoke tests (health checks)
 	pytest tests/smoke/ -m smoke

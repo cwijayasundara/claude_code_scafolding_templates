@@ -5,6 +5,8 @@ description: React 18 + TypeScript conventions, component patterns, state manage
 
 # Skill: React Frontend
 
+> **MANDATORY RULES**: All React code MUST follow `.claude/rules/react-patterns.md` (keys, useEffect cleanup, empty catch blocks, fetch timeouts, no `any` types). This skill provides implementation guidance (advisory); the rules file takes precedence on any conflict.
+
 ## When to Use
 Apply this skill when building React frontends, especially UIs that interact with AI agents or streaming backends.
 

@@ -38,10 +38,16 @@ select = [
     "B",    # flake8-bugbear
     "SIM",  # flake8-simplify
     "RUF",  # ruff-specific rules
+    "ERA",  # eradicate (commented-out code)
+    "T20",  # flake8-print (print statements)
+    "C90",  # mccabe (cyclomatic complexity)
 ]
 ignore = [
     "E501",  # line length handled by formatter
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
