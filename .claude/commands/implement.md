@@ -23,10 +23,16 @@ All checks must pass before proceeding to Phase 1.
 3. Spawn the test-writer sub-agent to write failing tests:
    - Unit tests in `tests/unit/` (mock external dependencies)
    - Integration tests in `tests/integration/` (real components, mock external APIs)
-   - Use the test plan's **Test Data** section to create factories and fixtures
-4. If the story has `frontend` or `fullstack` expertise tag:
-   - Write E2E test scripts in `tests/e2e/` using Playwright
+4. **Test data artifacts (MANDATORY)**: Read the test plan's **Test Data** section and create the actual code:
+   - **Factories**: If the test plan lists factories (factory-boy), create them in `tests/factories.py` or `tests/factories/`
+   - **Fixtures**: If the test plan lists fixtures, add them to `tests/conftest.py` (shared) or the relevant test file
+   - **Seed data**: If the test plan lists seed datasets for integration/E2E, create them in `tests/fixtures/` or as pytest fixtures
+   - **GATE**: Do NOT proceed to step 5 until every factory, fixture, and seed dataset listed in the test plan exists as actual code
+5. **E2E test scripts (MANDATORY for frontend/fullstack)**: Read the story's `## Expertise` tag.
+   If the tag is `frontend` or `fullstack`:
+   - You MUST write Playwright E2E test scripts in `tests/e2e/` — this is NOT optional
    - Use the test plan's **E2E Tests** section for scenarios
+   - Each acceptance criterion with a UI component MUST have at least one E2E test
    - Playwright MCP server is configured in `.mcp.json` — use it to validate selectors and user flows
    - E2E test structure:
      ```python
@@ -38,8 +44,15 @@ All checks must pass before proceeding to Phase 1.
          await page.click("[data-testid=submit]")
          await expect(page.locator("[data-testid=result]")).to_be_visible()
      ```
-5. Verify ALL new tests FAIL (they must — no implementation yet)
-6. Commit: `test: add failing tests for [STORY-ID]`
+   - **GATE**: Do NOT proceed to step 6 if expertise is `frontend` or `fullstack` and `tests/e2e/` has no test scripts (only `__init__.py` does NOT count)
+6. Verify ALL new tests FAIL (they must — no implementation yet)
+7. **RED phase artifact checklist** — verify before committing:
+   - [ ] Unit test files exist in `tests/unit/` for this story
+   - [ ] Integration test files exist in `tests/integration/` (if test plan has integration tests)
+   - [ ] Test data factories/fixtures from the test plan are implemented as actual code
+   - [ ] E2E test scripts exist in `tests/e2e/` (if expertise is `frontend` or `fullstack`)
+   - If ANY item is missing, STOP and create it before proceeding
+8. Commit: `test: add failing tests for [STORY-ID]`
 
 ## Phase 2: GREEN (Minimum Implementation)
 1. Read the failing tests — they define EXACTLY what to implement
@@ -62,13 +75,30 @@ Apply CLAUDE.md Pre-Completion Checklist to every file changed:
 10. Ensure all return types are specific (no `Any`)
 11. Ensure functions are ≤30 lines, files are ≤300 lines
 12. Verify test fixtures are shared via conftest.py (no duplicated setup across files)
-13. Run full CI: `make ci`
-14. ALL must pass. If anything fails, fix it.
-15. Commit: `refactor: clean up [STORY-ID] implementation`
+13. **Test data validation**: Re-read the test plan's **Test Data** section. For every factory, fixture, and seed dataset listed:
+    - Verify the corresponding code exists (in `tests/conftest.py`, `tests/factories.py`, or `tests/fixtures/`)
+    - If a factory/fixture is referenced in tests but not defined → create it
+    - If a fixture is duplicated across test files → consolidate into `tests/conftest.py`
+14. **E2E completeness check** (if expertise is `frontend` or `fullstack`):
+    - Verify every acceptance criterion with a UI element has a corresponding E2E test in `tests/e2e/`
+    - Verify E2E tests use `data-testid` selectors (not brittle CSS/XPath selectors)
+    - Verify E2E tests have proper setup/teardown (login state, test data seeding, cleanup)
+15. Run full CI: `make ci`
+16. ALL must pass. If anything fails, fix it.
+17. Commit: `refactor: clean up [STORY-ID] implementation`
 
 ## Phase 4: VALIDATE
 1. Run `make ci` one final time
 2. Verify coverage ≥ 80% for new code
 3. Verify no lint or type errors
-4. Verify Pre-Completion Checklist from CLAUDE.md (all 10 items) is satisfied
-5. Ready for PR — run `/pr` when done
+4. Verify Pre-Completion Checklist from CLAUDE.md (all 12 items) is satisfied
+5. **Test artifact checklist** — ALL must be satisfied before PR:
+   - [ ] Unit tests exist and pass for every new function/method
+   - [ ] Integration tests exist and pass for every API endpoint / service boundary
+   - [ ] Test data artifacts (factories, fixtures, seed data) from the test plan are implemented as code — not just documented in the plan
+   - [ ] E2E Playwright test scripts exist in `tests/e2e/` with real assertions (if story expertise is `frontend` or `fullstack`)
+   - [ ] E2E tests cover every acceptance criterion that has a user-facing UI element
+   - [ ] `tests/conftest.py` has shared fixtures — no duplicated setup across test files
+   - [ ] Traceability: every acceptance criterion in the story maps to at least one passing test
+   - If ANY item is not satisfied, STOP and fix it before proceeding to `/pr`
+6. Ready for PR — run `/pr` when done

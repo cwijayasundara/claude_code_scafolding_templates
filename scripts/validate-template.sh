@@ -447,6 +447,69 @@ else
 fi
 echo ""
 
+# ---- 15. Test artifact enforcement ----
+echo "15. Test artifact enforcement"
+
+# Check /implement has E2E gate
+if grep -q "MANDATORY for frontend/fullstack\|MANDATORY.*frontend.*fullstack" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement enforces E2E tests for frontend/fullstack stories"
+else
+  fail "/implement does NOT enforce E2E tests — frontend stories can skip Playwright scripts"
+fi
+
+# Check /implement has test data artifact gate
+if grep -q "Test data artifacts.*MANDATORY\|factories.*fixtures.*GATE\|test data.*GATE" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement enforces test data artifacts (factories/fixtures/seed data)"
+else
+  fail "/implement does NOT enforce test data artifacts — test plans stay as docs only"
+fi
+
+# Check /implement Phase 4 has test artifact checklist
+if grep -q "Test artifact checklist\|test artifact checklist" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement Phase 4 has test artifact validation checklist"
+else
+  fail "/implement Phase 4 missing test artifact checklist — no final validation"
+fi
+
+# Check /implement has RED phase artifact checklist
+if grep -q "RED phase artifact checklist" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement Phase 1 has RED phase artifact checklist"
+else
+  fail "/implement Phase 1 missing RED phase artifact checklist"
+fi
+
+# Check /implement Phase 3 has test data validation
+if grep -q "Test data validation\|test data validation" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement Phase 3 validates test data fixtures exist as code"
+else
+  fail "/implement Phase 3 does NOT validate test data fixtures"
+fi
+
+# Check /implement Phase 3 has E2E completeness check
+if grep -q "E2E completeness check" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement Phase 3 has E2E completeness check"
+else
+  fail "/implement Phase 3 missing E2E completeness check"
+fi
+
+# Check CLAUDE.md documents test enforcement
+if grep -q "E2E test enforcement\|E2E.*enforcement" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents E2E test enforcement"
+else
+  fail "CLAUDE.md does not document E2E test enforcement"
+fi
+if grep -q "Test data enforcement\|test data enforcement" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents test data enforcement"
+else
+  fail "CLAUDE.md does not document test data enforcement"
+fi
+if grep -q "Traceability enforcement\|traceability enforcement" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents traceability enforcement"
+else
+  fail "CLAUDE.md does not document traceability enforcement"
+fi
+echo ""
+
 # ---- Summary ----
 echo "=== Summary ==="
 echo "  PASS: $PASS"

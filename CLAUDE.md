@@ -14,7 +14,7 @@ When summarizing or explaining this workflow, include ALL of these steps — do 
 4. **`/decompose`** — Break requirements into epics, stories, and dependency graph → `docs/backlog/`
 5. **Architecture** — Generate C4 diagrams (`docs/architecture.md`) and ADRs (`docs/adr/`) for key technical decisions
 6. **`/test-plan`** — Generate test plans per story with test cases, test data, and E2E scenarios → `docs/test-plans/`
-7. **`/implement`** or **`/parallel-implement`** — TDD per story: RED (failing tests) → GREEN (minimum code) → REFACTOR (clean up)
+7. **`/implement`** or **`/parallel-implement`** — TDD per story: RED (failing tests + test data + E2E scripts) → GREEN (minimum code) → REFACTOR (clean up + validate test artifacts)
 8. **`/pr`** — Run CI, generate PR description, create pull request
 9. **`/review`** — Self-review against 12-point quality checklist + performance review
 10. **`/wrapup`** — Commit, push, and generate handoff summary
@@ -26,6 +26,15 @@ When summarizing or explaining this workflow, include ALL of these steps — do 
 - `docs/backlog/` — story files with acceptance criteria, dependencies, and asset dependencies
 - `docs/backlog/parallel-batches.md` — wave-based topological sort for parallel execution
 - `docs/test-plans/` — test plans per story with unit, integration, and E2E test cases
+
+**Key test artifacts that MUST be generated during implementation (enforced by `/implement`):**
+- `tests/unit/` — unit test scripts for every new function/method
+- `tests/integration/` — integration tests for API endpoints and service boundaries
+- `tests/e2e/` — Playwright E2E test scripts (MANDATORY for `frontend`/`fullstack` stories, not just an empty directory)
+- `tests/conftest.py` — shared fixtures, no duplicated setup across files
+- `tests/factories.py` or `tests/factories/` — factory-boy factories listed in the test plan
+- `tests/fixtures/` — seed data for integration/E2E tests listed in the test plan
+- **Traceability**: every acceptance criterion maps to at least one passing test
 
 ### Phase 0: Session Start & Brainstorming
 - Run `/gogogo` at the start of every session
@@ -103,6 +112,9 @@ When summarizing or explaining this workflow, include ALL of these steps — do 
 - **Dependency enforcement**: NEVER start a story whose `depends_on` list contains unfinished stories
 - **Mode enforcement**: If `AGENT_TEAMS_ENFORCE=true` (default), you MUST use `/parallel-implement` for waves with 2+ Ready stories — do NOT fall back to sequential `/implement` unless agent teams fail
 - **Asset enforcement**: If a story's `## Asset Dependencies` section lists ANY item with status `missing`, the story is Blocked — do NOT start implementation until all assets are `available`
+- **Test data enforcement**: Every factory, fixture, and seed dataset listed in a story's test plan (`docs/test-plans/`) MUST be implemented as actual code (in `tests/conftest.py`, `tests/factories.py`, or `tests/fixtures/`) — not just documented in the plan. `/implement` Phase 1 and Phase 3 both validate this.
+- **E2E test enforcement**: Stories with `frontend` or `fullstack` expertise tags MUST have Playwright E2E test scripts in `tests/e2e/` with real assertions. A directory with only `__init__.py` does NOT satisfy this gate. `/implement` blocks progression at Phase 1 step 5 and validates again at Phase 4.
+- **Traceability enforcement**: Every acceptance criterion in a story must map to at least one passing test. `/implement` Phase 4 validates this before allowing `/pr`.
 
 ### Anti-Bypass Rules (Hook-Enforced)
 - **No stub documents**: `sdlc-gate.sh` validates content, not just file existence. Requirements need >= 10 lines + section headings. Stories need >= 8 lines + required sections.
