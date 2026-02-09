@@ -4,6 +4,29 @@
 
 **BLOCKING REQUIREMENT**: You MUST follow this workflow for ALL implementation tasks. You are FORBIDDEN from writing production code or tests without completing the prior steps. If a user says "implement X" or "build Y" or gives you a plan, you MUST still follow this workflow — do NOT skip steps.
 
+### Workflow Summary Checklist
+
+When summarizing or explaining this workflow, include ALL of these steps — do NOT collapse or omit any:
+
+1. **`/gogogo`** — Session startup: load context, check git status, show ready work
+2. **`/spike`** _(optional)_ — Time-boxed exploration for technical questions before committing to a direction
+3. **`/interview`** — Gather structured requirements → `docs/requirements.md`
+4. **`/decompose`** — Break requirements into epics, stories, and dependency graph → `docs/backlog/`
+5. **Architecture** — Generate C4 diagrams (`docs/architecture.md`) and ADRs (`docs/adr/`) for key technical decisions
+6. **`/test-plan`** — Generate test plans per story with test cases, test data, and E2E scenarios → `docs/test-plans/`
+7. **`/implement`** or **`/parallel-implement`** — TDD per story: RED (failing tests) → GREEN (minimum code) → REFACTOR (clean up)
+8. **`/pr`** — Run CI, generate PR description, create pull request
+9. **`/review`** — Self-review against 12-point quality checklist + performance review
+10. **`/wrapup`** — Commit, push, and generate handoff summary
+
+**Key outputs that MUST exist before implementation begins:**
+- `docs/requirements.md` — structured requirements (>= 10 lines, required section headings)
+- `docs/architecture.md` — C4 system/container/component diagrams
+- `docs/adr/` — Architecture Decision Records for key technical choices
+- `docs/backlog/` — story files with acceptance criteria, dependencies, and asset dependencies
+- `docs/backlog/parallel-batches.md` — wave-based topological sort for parallel execution
+- `docs/test-plans/` — test plans per story with unit, integration, and E2E test cases
+
 ### Phase 0: Session Start & Brainstorming
 - Run `/gogogo` at the start of every session
 - Brainstorming, discussing ideas, exploring architecture, and asking questions is ALWAYS welcome
