@@ -9,13 +9,21 @@ Start-of-session ceremony. Load project context, check environment, and present 
    - Read `docs/architecture.md` if it exists (for current architecture overview)
    - Identify the tech stack and active deployment target
 
-2. **Check environment health**:
+2. **Display SDLC mode**:
+   - Read `SDLC_MODE` from `.claude/settings.json` → `env` block (default: `"full"`)
+   - Display prominently in the session summary:
+     - **Full mode**: "SDLC Mode: FULL — all artifacts required (architecture, ADRs, test plans, dependency graph, parallel batches)"
+     - **Lite mode**: "SDLC Mode: LITE — fast-track pipeline (requirements + stories + TDD, no architecture/ADRs/test plans/parallel batches)"
+   - Show how to switch: "To change mode, edit `.claude/settings.json` → `env.SDLC_MODE` to `\"full\"` or `\"lite\"`"
+   - If lite mode, note: "Coverage target: 60%. E2E tests: optional. Implementation: sequential only."
+
+3. **Check environment health**:
    - Run `git status` to check current branch, uncommitted changes, and upstream sync
    - Run `git log --oneline -5` to show recent commits
    - Check for unresolved merge conflicts
    - Verify dev dependencies are installed: `make build` (skip if lock file unchanged)
 
-3. **Show ready work from backlog**:
+4. **Show ready work from backlog**:
    - List all story files in `docs/backlog/` (recursively)
    - Classify each story:
      - **Ready** — no blocking dependencies, not started
@@ -24,7 +32,7 @@ Start-of-session ceremony. Load project context, check environment, and present 
      - **Done** — all acceptance criteria met, merged to main
    - Present the list sorted by priority (Ready first, then In Progress)
 
-4. **Show parallel execution options** (primary path):
+5. **Show parallel execution options** (primary path — full mode only):
    - Check if `docs/backlog/parallel-batches.md` exists
    - If it does, read it and identify waves with 2+ Ready stories
    - For each parallelizable wave, show:
@@ -36,22 +44,23 @@ Start-of-session ceremony. Load project context, check environment, and present 
      - Fallback: "Run `/parallel-manual wave-N` to set up worktrees for manual parallel implementation"
    - If no waves have 2+ Ready stories, skip this section
 
-5. **Check for in-progress work**:
+6. **Check for in-progress work**:
    - List open feature branches: `git branch --list 'feature/*'`
    - For each, show last commit date and whether it has a PR open
    - Highlight any stale branches (no commits in 7+ days)
 
-6. **Present session options**:
+7. **Present session options**:
    - If there's an in-progress story with uncommitted work: "Resume work on [story]?"
    - If a wave has 2+ Ready stories: "Start wave N with `/parallel-implement wave-N`?" (primary suggestion)
    - If there's a single ready story at the top of the backlog: "Start [story] with `/implement`?"
    - If there's a PR awaiting review: "Review PR #[N] with `/review`?"
    - If no stories exist: "Let's capture your ideas — run `/interview` to turn them into requirements."
 
-7. **Output a session summary**:
+8. **Output a session summary**:
    ```
    ## Session Ready
 
+   **SDLC Mode**: FULL | LITE _(change in `.claude/settings.json` → `env.SDLC_MODE`)_
    **Branch**: feature/STORY-XXX-description (3 ahead, 0 behind main)
    **Last commit**: feat: implement search endpoint (2h ago)
    **Uncommitted**: 2 modified files

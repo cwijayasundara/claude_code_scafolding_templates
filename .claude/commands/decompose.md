@@ -2,6 +2,24 @@
 
 Read the requirements document at $ARGUMENTS.
 
+## Mode Detection
+
+Read `SDLC_MODE` from `.claude/settings.json` → `env` block (default: `"full"`).
+
+| Output | Full Mode | Lite Mode |
+|--------|-----------|-----------|
+| Story files in `docs/backlog/` | Yes (>= 8 lines, Dependencies required) | Yes (>= 4 lines, Acceptance Criteria only) |
+| `implementation-order.md` | Yes | Yes |
+| `dependency-graph.mmd` | Yes | Skipped |
+| `parallel-batches.md` | Yes | Skipped |
+| `docs/architecture.md` | Yes | Skipped |
+| `docs/adr/` | Yes | Skipped |
+| `docs/test-plans/` | Yes (via `/test-plan`) | Skipped |
+
+---
+
+## Full Mode (SDLC_MODE = "full")
+
 1. Identify capability areas → create Epics
 2. For each Epic, create User Stories (INVEST criteria):
    - Independent, Negotiable, Valuable, Estimable, Small, Testable
@@ -95,4 +113,48 @@ Read the requirements document at $ARGUMENTS.
    - E2E test plans are generated for stories with `frontend` or `fullstack` expertise tags
    - Ensure `docs/test-plans/` directory is created
 
-DO NOT implement any code. Planning and test planning only.
+---
+
+## Lite Mode (SDLC_MODE = "lite")
+
+1. Identify capability areas → create Epics
+2. For each Epic, create User Stories (INVEST criteria):
+   - Independent, Negotiable, Valuable, Estimable, Small, Testable
+3. For each Story, generate a file with these MANDATORY sections:
+   - **Title**: As a [role], I want [capability], so that [benefit]
+   - **Acceptance Criteria**: Given/When/Then (min 2 per story)
+   - **Story Points**: Fibonacci (1, 2, 3, 5, 8)
+   - **Expertise tag**: backend / frontend / fullstack / infra / data
+
+   Lite story file format:
+   ```markdown
+   # STORY-XXX: [Title]
+
+   ## User Story
+   As a [role], I want [capability], so that [benefit].
+
+   ## Story Points: N
+
+   ## Expertise: backend|frontend|fullstack|infra|data
+
+   ## Acceptance Criteria
+   - Given ... When ... Then ...
+   - Given ... When ... Then ...
+   ```
+
+   **Note**: In lite mode, `## Dependencies`, `## Asset Dependencies`, `blocks:`, and `depends_on:` are optional. If the user mentions dependencies, include them, but they are not required.
+
+4. Generate implementation order → `docs/backlog/implementation-order.md`
+   Using: foundation → infrastructure → contracts → core → integration → UI
+5. Output stories to `docs/backlog/[epic-name]/[story-id].md`
+
+**Skipped in lite mode** (do NOT generate these):
+- `docs/backlog/dependency-graph.mmd`
+- `docs/backlog/parallel-batches.md`
+- `docs/architecture.md`
+- `docs/adr/`
+- `docs/test-plans/`
+
+---
+
+DO NOT implement any code. Planning only (no test planning in lite mode).

@@ -23,6 +23,7 @@
     ]
   },
   "env": {
+    "SDLC_MODE": "full", 
     "AGENT_TEAMS_ENABLED": "true",
     "AGENT_TEAMS_ENFORCE": "true",
     "AGENT_TEAMS_MAX_TEAMMATES": "3",

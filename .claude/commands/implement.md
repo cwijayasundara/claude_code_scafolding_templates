@@ -2,33 +2,52 @@
 
 Read the user story at $ARGUMENTS.
 
+## Mode Detection
+
+Read `SDLC_MODE` from `.claude/settings.json` → `env` block (default: `"full"`).
+
+| Aspect | Full Mode | Lite Mode |
+|--------|-----------|-----------|
+| Requirements gate | >= 10 lines, >= 2 sections | >= 5 lines, >= 1 section |
+| Story gate | >= 8 lines + Dependencies | >= 4 lines + Acceptance Criteria |
+| Test plan required | Yes (Phase 0 step 3) | Skipped |
+| Agent Teams redirect | Yes (Phase 0 step 7) | Skipped |
+| E2E Playwright tests | Mandatory for frontend/fullstack | Optional |
+| Test data validation | Mandatory (Phase 3 step 13) | Skipped |
+| E2E completeness check | Mandatory (Phase 3 step 14) | Skipped |
+| Coverage target | >= 80% | >= 60% |
+| Test artifact checklist | Full (Phase 4) | Reduced (Phase 4) |
+
+---
+
 ## Phase 0: Pre-flight Verification
 
 Before starting TDD, verify ALL prerequisites are met:
 
-1. **Requirements content check**: Read `docs/requirements.md` — verify it has >= 10 lines and at least 2 of these sections: `## Problem Statement`, `## Functional Requirements`, `## Target Users`, `## Non-Functional Requirements`. If it's a stub or missing, STOP and run `/interview`.
-2. **Story content check**: Read the story file — verify it has >= 8 lines and includes `## User Story` or `## Acceptance Criteria` + `## Dependencies` headings. If it's a stub, STOP and run `/decompose`.
-3. **Test plan check**: Check if `docs/test-plans/[story-id]-test-plan.md` exists. If not, run `/test-plan [story-file]` before proceeding.
+1. **Requirements content check**: Read `docs/requirements.md` — verify it meets the mode thresholds. **Full**: >= 10 lines and at least 2 of these sections: `## Problem Statement`, `## Functional Requirements`, `## Target Users`, `## Non-Functional Requirements`. **Lite**: >= 5 lines and at least 1 section. If it's a stub or missing, STOP and run `/interview`.
+2. **Story content check**: Read the story file. **Full**: verify >= 8 lines and includes `## User Story` or `## Acceptance Criteria` + `## Dependencies` headings. **Lite**: verify >= 4 lines and includes `## User Story` or `## Acceptance Criteria` (Dependencies not required). If it's a stub, STOP and run `/decompose`.
+3. **Test plan check** _(full mode only)_: Check if `docs/test-plans/[story-id]-test-plan.md` exists. If not, run `/test-plan [story-file]` before proceeding. _Skipped in lite mode._
 4. **Feature branch check**: Verify you are on a `feature/*` branch. If on main/master, create one: `git checkout -b feature/STORY-XXX-short-description`.
-5. **Dependency check**: Read the story's `## Dependencies` section. Verify ALL stories in `depends_on:` are Done. If any are not Done, STOP and report which dependencies are blocking.
+5. **Dependency check**: If the story has a `## Dependencies` section, verify ALL stories in `depends_on:` are Done. If any are not Done, STOP and report which dependencies are blocking. _(In lite mode, stories may not have a Dependencies section — skip if absent.)_
 6. **Asset dependency check**: If the story has an `## Asset Dependencies` section, scan the table for any row with status `missing`. If ANY asset is missing, STOP and report: "Blocked by missing assets: [list]. Provide the assets or remove them from the story before implementing."
-7. **Agent Teams check**: Read `AGENT_TEAMS_ENFORCE` from `.claude/settings.json` env block. If `"true"`, check if this story is in a wave with 2+ Ready stories in `docs/backlog/parallel-batches.md`. If yes, STOP and redirect: "This story is in a multi-story wave. Use `/parallel-implement wave-N` instead."
+7. **Agent Teams check** _(full mode only)_: Read `AGENT_TEAMS_ENFORCE` from `.claude/settings.json` env block. If `"true"`, check if this story is in a wave with 2+ Ready stories in `docs/backlog/parallel-batches.md`. If yes, STOP and redirect: "This story is in a multi-story wave. Use `/parallel-implement wave-N` instead." _Skipped in lite mode (always sequential)._
 
 All checks must pass before proceeding to Phase 1.
 
 ## Phase 1: RED (Failing Tests)
 1. Read the story's acceptance criteria
-2. Read the test plan at `docs/test-plans/[story-id]-test-plan.md`
+2. **Full mode**: Read the test plan at `docs/test-plans/[story-id]-test-plan.md`
    - If the test plan does NOT exist, generate it first: run `/test-plan [story-file]`
+   **Lite mode**: Skip test plan — the test-writer works directly from acceptance criteria in the story file.
 3. Spawn the test-writer sub-agent to write failing tests:
    - Unit tests in `tests/unit/` (mock external dependencies)
    - Integration tests in `tests/integration/` (real components, mock external APIs)
-4. **Test data artifacts (MANDATORY)**: Read the test plan's **Test Data** section and create the actual code:
+4. **Test data artifacts** _(full mode: MANDATORY; lite mode: best-effort)_: **Full mode**: Read the test plan's **Test Data** section and create the actual code. **Lite mode**: Create fixtures as needed for tests, but no formal test plan validation.
    - **Factories**: If the test plan lists factories (factory-boy), create them in `tests/factories.py` or `tests/factories/`
    - **Fixtures**: If the test plan lists fixtures, add them to `tests/conftest.py` (shared) or the relevant test file
    - **Seed data**: If the test plan lists seed datasets for integration/E2E, create them in `tests/fixtures/` or as pytest fixtures
    - **GATE**: Do NOT proceed to step 5 until every factory, fixture, and seed dataset listed in the test plan exists as actual code
-5. **E2E Playwright test scripts (MANDATORY for frontend/fullstack)**: Read the story's `## Expertise` tag.
+5. **E2E Playwright test scripts** _(full mode: MANDATORY for frontend/fullstack; lite mode: optional)_: Read the story's `## Expertise` tag.
    If the tag is `frontend` or `fullstack`:
    - You MUST write Playwright E2E test scripts in `tests/e2e/` — this is NOT optional
    - Use the test plan's **Playwright Test Skeletons** as your starting point
@@ -54,15 +73,15 @@ All checks must pass before proceeding to Phase 1.
      - Using regex to assert source code contains keywords like `"useEffect"` or `"AbortSignal"`
      - Any test that validates code structure instead of runtime behavior
      - A `tests/e2e/` directory with only `__init__.py` or empty test files
-   - **GATE**: Do NOT proceed to step 6 if expertise is `frontend` or `fullstack` and `tests/e2e/` has no valid Playwright test scripts
+   - **GATE** _(full mode only)_: Do NOT proceed to step 6 if expertise is `frontend` or `fullstack` and `tests/e2e/` has no valid Playwright test scripts. _In lite mode, E2E tests are optional._
    - **Frontend component tests**: For React components, also write component-level tests using `@testing-library/react` (`render`, `screen`, `userEvent`) in `frontend/src/components/*.test.tsx` or `tests/unit/`. These test isolated component behavior and are DISTINCT from E2E tests.
 6. Verify ALL new tests FAIL (they must — no implementation yet)
 7. **RED phase artifact checklist** — verify before committing:
    - [ ] Unit test files exist in `tests/unit/` for this story
-   - [ ] Integration test files exist in `tests/integration/` (if test plan has integration tests)
-   - [ ] Test data factories/fixtures from the test plan are implemented as actual code
-   - [ ] E2E test scripts exist in `tests/e2e/` (if expertise is `frontend` or `fullstack`)
-   - If ANY item is missing, STOP and create it before proceeding
+   - [ ] Integration test files exist in `tests/integration/` (if test plan has integration tests — _full mode only_)
+   - [ ] Test data factories/fixtures from the test plan are implemented as actual code _(full mode only)_
+   - [ ] E2E test scripts exist in `tests/e2e/` (if expertise is `frontend` or `fullstack`) _(full mode only — optional in lite)_
+   - If ANY required item is missing, STOP and create it before proceeding
 8. Commit: `test: add failing tests for [STORY-ID]`
 
 ## Phase 2: GREEN (Minimum Implementation)
@@ -86,11 +105,11 @@ Apply CLAUDE.md Pre-Completion Checklist to every file changed:
 10. Ensure all return types are specific (no `Any`)
 11. Ensure functions are ≤30 lines, files are ≤300 lines
 12. Verify test fixtures are shared via conftest.py (no duplicated setup across files)
-13. **Test data validation**: Re-read the test plan's **Test Data** section. For every factory, fixture, and seed dataset listed:
+13. **Test data validation** _(full mode only — skipped in lite)_: Re-read the test plan's **Test Data** section. For every factory, fixture, and seed dataset listed:
     - Verify the corresponding code exists (in `tests/conftest.py`, `tests/factories.py`, or `tests/fixtures/`)
     - If a factory/fixture is referenced in tests but not defined → create it
     - If a fixture is duplicated across test files → consolidate into `tests/conftest.py`
-14. **E2E completeness check** (if expertise is `frontend` or `fullstack`):
+14. **E2E completeness check** _(full mode only — skipped in lite)_ (if expertise is `frontend` or `fullstack`):
     - Verify every acceptance criterion with a UI element has a corresponding E2E test in `tests/e2e/`
     - Verify E2E tests use `data-testid` selectors (not brittle CSS/XPath selectors)
     - Verify E2E tests have proper setup/teardown (login state, test data seeding, cleanup)
@@ -100,18 +119,23 @@ Apply CLAUDE.md Pre-Completion Checklist to every file changed:
 
 ## Phase 4: VALIDATE
 1. Run `make ci` one final time
-2. Verify coverage ≥ 80% for new code
+2. Verify coverage meets mode target: **Full**: >= 80%. **Lite**: >= 60%.
 3. Verify no lint or type errors
 4. Verify Pre-Completion Checklist from CLAUDE.md (all 12 items) is satisfied
-5. **Test artifact checklist** — ALL must be satisfied before PR:
+5. **Test artifact checklist** — items vary by mode:
+
+   **Both modes (always required):**
    - [ ] Unit tests exist and pass for every new function/method
+   - [ ] `tests/conftest.py` has shared fixtures — no duplicated setup across test files
+   - [ ] Traceability: every acceptance criterion in the story maps to at least one passing test
+
+   **Full mode only (skipped in lite):**
    - [ ] Integration tests exist in `tests/integration/` with `@pytest.mark.integration` for every API endpoint / service boundary
    - [ ] Test data artifacts (factories, fixtures, seed data) from the test plan are implemented as code — not just documented in the plan
    - [ ] E2E Playwright test scripts exist in `tests/e2e/` using `page.goto()`, `page.fill()`, `page.click()`, `expect()` (if story expertise is `frontend` or `fullstack`)
    - [ ] E2E tests are NOT static file analysis — they must test runtime behavior via Playwright, not read `.tsx` source with Python
    - [ ] E2E tests cover every acceptance criterion that has a user-facing UI element
    - [ ] Frontend component tests use `@testing-library/react` (`render`, `screen`, `userEvent`) — not Python source file reading
-   - [ ] `tests/conftest.py` has shared fixtures — no duplicated setup across test files
-   - [ ] Traceability: every acceptance criterion in the story maps to at least one passing test
-   - If ANY item is not satisfied, STOP and fix it before proceeding to `/pr`
+
+   - If ANY required item is not satisfied, STOP and fix it before proceeding to `/pr`
 6. Ready for PR — run `/pr` when done

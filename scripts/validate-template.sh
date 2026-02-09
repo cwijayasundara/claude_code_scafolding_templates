@@ -570,6 +570,80 @@ else
 fi
 echo ""
 
+# ---- 17. SDLC Lite mode support ----
+echo "17. SDLC Lite mode support"
+
+# Check SDLC_MODE exists in settings.json
+if [[ -f ".claude/settings.json" ]]; then
+  SDLC_MODE=$(jq -r '.env.SDLC_MODE // "not set"' .claude/settings.json 2>/dev/null)
+  if [[ "$SDLC_MODE" == "full" || "$SDLC_MODE" == "lite" ]]; then
+    pass "SDLC_MODE set to '$SDLC_MODE' in settings.json"
+  elif [[ "$SDLC_MODE" == "not set" ]]; then
+    fail "SDLC_MODE not found in settings.json env block"
+  else
+    fail "SDLC_MODE has invalid value '$SDLC_MODE' (must be 'full' or 'lite')"
+  fi
+fi
+
+# Check sdlc-gate.sh reads SDLC_MODE
+if grep -q "SDLC_MODE" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh reads SDLC_MODE for mode-dependent thresholds"
+else
+  fail "sdlc-gate.sh does NOT read SDLC_MODE — lite mode thresholds not applied"
+fi
+
+# Check sdlc-gate.sh has parameterized thresholds
+if grep -q "REQ_MIN_LINES" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh uses parameterized requirement thresholds"
+else
+  fail "sdlc-gate.sh does NOT use parameterized thresholds"
+fi
+
+if grep -q "STORY_MIN_LINES" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh uses parameterized story thresholds"
+else
+  fail "sdlc-gate.sh does NOT use parameterized story thresholds"
+fi
+
+if grep -q "REQUIRE_TEST_PLAN" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh has conditional test plan gate"
+else
+  fail "sdlc-gate.sh does NOT have conditional test plan gate"
+fi
+
+# Check CLAUDE.md documents lite mode
+if grep -q "SDLC Mode.*Full vs Lite\|SDLC_MODE" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents SDLC lite mode"
+else
+  fail "CLAUDE.md does not document SDLC lite mode"
+fi
+
+# Check commands reference lite mode
+if grep -q "lite\|SDLC_MODE" .claude/commands/gogogo.md 2>/dev/null; then
+  pass "gogogo.md references lite mode"
+else
+  fail "gogogo.md does NOT reference lite mode"
+fi
+
+if grep -q "lite\|Lite Mode\|SDLC_MODE" .claude/commands/interview.md 2>/dev/null; then
+  pass "interview.md references lite mode"
+else
+  fail "interview.md does NOT reference lite mode"
+fi
+
+if grep -q "lite\|Lite Mode\|SDLC_MODE" .claude/commands/decompose.md 2>/dev/null; then
+  pass "decompose.md references lite mode"
+else
+  fail "decompose.md does NOT reference lite mode"
+fi
+
+if grep -q "lite\|Lite Mode\|SDLC_MODE" .claude/commands/implement.md 2>/dev/null; then
+  pass "implement.md references lite mode"
+else
+  fail "implement.md does NOT reference lite mode"
+fi
+echo ""
+
 # ---- Summary ----
 echo "=== Summary ==="
 echo "  PASS: $PASS"

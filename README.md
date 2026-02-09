@@ -1,6 +1,6 @@
 # Claude Code SDLC Scaffolding Template
 
-Production-ready Claude Code configuration that enforces a full SDLC workflow with gated phases, TDD, and automated quality checks. Supports sequential and parallel (agent teams) implementation with dependency-safe wave batching.
+Production-ready Claude Code configuration that enforces a full SDLC workflow with gated phases, TDD, and automated quality checks. Supports sequential and parallel (agent teams) implementation with dependency-safe wave batching. Includes a **lite mode** for fast-track pipelines that keep safety guardrails while reducing ceremony.
 
 **Includes:** 12 slash commands, 6 enforcement rules (Python + TypeScript/React), 7 domain skills, 3 sub-agents, 7 hooks, starter permissions, and a 12-point code review checklist.
 
@@ -123,7 +123,7 @@ Every story goes through `/implement` which enforces Red-Green-Refactor:
                                    │
                     ┌──────────────▼──────────────┐
                     │  4. VALIDATE: make ci        │
-                    │     coverage >= 80%          │
+                    │     coverage >= 80%/60%      │
                     └─────────────────────────────┘
 ```
 
@@ -377,6 +377,24 @@ The starter permissions pre-approve common dev commands so Claude Code doesn't p
 
 Add or remove commands to match your stack (e.g., add `"Bash(cargo *)"` for Rust).
 
+The `env` block controls SDLC and agent teams behavior:
+
+```jsonc
+"env": {
+  "SDLC_MODE": "full",               // "full" or "lite" — controls pipeline strictness
+  "AGENT_TEAMS_ENABLED": "true",      // unlock /parallel-implement
+  "AGENT_TEAMS_ENFORCE": "true",      // force parallel for multi-story waves (full mode only)
+  "AGENT_TEAMS_MAX_TEAMMATES": "3"    // max concurrent teammates
+}
+```
+
+| Setting | Allowed Values | Default | Purpose |
+|---------|---------------|---------|---------|
+| `SDLC_MODE` | `"full"`, `"lite"` | `"full"` | Controls pipeline strictness — lite skips architecture, ADRs, test plans, and relaxes thresholds |
+| `AGENT_TEAMS_ENABLED` | `"true"`, `"false"` | `"true"` | Unlocks `/parallel-implement` command (full mode only) |
+| `AGENT_TEAMS_ENFORCE` | `"true"`, `"false"` | `"true"` | Forces parallel for multi-story waves (full mode only) |
+| `AGENT_TEAMS_MAX_TEAMMATES` | `"1"`-`"5"` | `"3"` | Max concurrent teammates per wave |
+
 ### 5. `.claude/skills/` (optional)
 
 Keep the skills relevant to your stack, delete the rest:
@@ -413,20 +431,53 @@ Claude Code automatically reads `CLAUDE.md` and `.claude/` on startup. The rules
 
 This loads project context, checks git status, shows your backlog, shows parallel options, and suggests what to work on next. **Always start here.**
 
-### Choosing an Implementation Mode
+### Choosing SDLC Mode: Full vs Lite
 
-The framework supports three modes. Choose based on your team size, budget, and risk tolerance:
+The framework supports two SDLC modes controlled by `SDLC_MODE` in `.claude/settings.json` → `env` block:
 
-| Mode | Command | Setup | Token Cost | Best For |
-|------|---------|-------|-----------|----------|
-| **Sequential** (default) | `/implement` | None | 1x | Solo dev, early projects |
-| **Manual Parallel** | `/parallel-manual` | Multiple terminals | 1x per terminal | Teams, cost-conscious |
-| **Agent Teams** | `/parallel-implement` | Experimental flag | ~7x per teammate | Speed-critical, budget available |
+| Aspect | Full (default) | Lite |
+|--------|---------------|------|
+| Requirements | >= 10 lines, 2 sections | >= 5 lines, 1 section |
+| Stories | >= 8 lines + Dependencies | >= 4 lines + Acceptance Criteria only |
+| Coverage | 80% | 60% |
+| Architecture/ADRs | Required | Skipped |
+| Test plans | Required | Skipped |
+| Dependency graph | Required | Skipped |
+| Parallel batches | Required | Skipped |
+| E2E Playwright | Mandatory for frontend | Optional |
+| Parallel implementation | Enforced (agent teams) | Sequential only |
 
-To switch modes, edit `.claude/settings.json` -> `env` block:
+**Always enforced in both modes**: feature branches, conventional commits, TDD Red-Green-Refactor, CI must pass.
+
+To switch modes, edit `.claude/settings.json` → `env` block:
 
 ```jsonc
 "env": {
+  "SDLC_MODE": "full"    // "full" (default) or "lite"
+}
+```
+
+**Allowed values for `SDLC_MODE`:**
+- `"full"` — All artifacts required: architecture, ADRs, test plans, dependency graph, parallel batches, E2E tests for frontend stories. This is the default.
+- `"lite"` — Fast-track pipeline: requirements + stories + TDD only. No architecture docs, no test plans, no dependency graph, no parallel batches. E2E tests are optional. Coverage target is 60% instead of 80%.
+
+Use **lite** for prototypes, spikes-turned-features, small projects, or when the full pipeline is too slow. Use **full** for production systems, team projects, or anything with complex dependencies.
+
+### Choosing an Implementation Mode
+
+The framework supports three implementation modes (within full SDLC mode). In lite mode, only sequential is used.
+
+| Mode | Command | Setup | Token Cost | Best For |
+|------|---------|-------|-----------|----------|
+| **Sequential** (default) | `/implement` | None | 1x | Solo dev, early projects, lite mode |
+| **Manual Parallel** | `/parallel-manual` | Multiple terminals | 1x per terminal | Teams, cost-conscious |
+| **Agent Teams** | `/parallel-implement` | Experimental flag | ~7x per teammate | Speed-critical, budget available |
+
+To configure parallel implementation, edit `.claude/settings.json` → `env` block:
+
+```jsonc
+"env": {
+  "SDLC_MODE": "full",            // must be "full" for parallel modes
   "AGENT_TEAMS_ENABLED": "true",   // unlock /parallel-implement
   "AGENT_TEAMS_ENFORCE": "true",   // FORCE parallel for multi-story waves
   "AGENT_TEAMS_MAX_TEAMMATES": "3" // max concurrent teammates
@@ -562,7 +613,7 @@ tests/                                   # Test directories with markers
   e2e/
 
 .claude/
-  settings.json                          # Hooks + starter permissions + agent teams config
+  settings.json                          # Hooks + starter permissions + SDLC mode + agent teams config
   rules/
     security.md                          # Secrets, input validation, SQL injection, frontend fetch
     code-style.md                        # Size limits (50/500), constants, type safety, dead code
@@ -610,7 +661,7 @@ tests/                                   # Test directories with markers
     release.yml                          # Docker build on tag
 
 scripts/
-  validate-template.sh                   # Template validation (67 checks)
+  validate-template.sh                   # Template validation (127 checks)
   test-agent-teams.sh                    # Agent teams validation (44 checks)
   test-test-artifacts.sh                 # Test artifact pipeline validation (49 checks)
 ```
@@ -690,7 +741,7 @@ Three test scripts validate different aspects of the framework. Run them all to 
 
 ```bash
 # Run all three test suites
-./scripts/validate-template.sh       # 67 checks: core files, hooks, settings, gates
+./scripts/validate-template.sh       # 127 checks: core files, hooks, settings, gates, lite mode
 ./scripts/test-agent-teams.sh        # 44 checks: worktree guard, hooks, settings, patterns
 ./scripts/test-test-artifacts.sh     # 49 checks: test plans, Playwright, pipeline wiring
 ```
