@@ -23,8 +23,8 @@
     ]
   },
   "env": {
-    "AGENT_TEAMS_ENABLED": "false",
-    "AGENT_TEAMS_ENFORCE": "false",
+    "AGENT_TEAMS_ENABLED": "true",
+    "AGENT_TEAMS_ENFORCE": "true",
     "AGENT_TEAMS_MAX_TEAMMATES": "3",
     "AGENT_TEAMS_WORKTREE_DIR": ".worktrees",
     "AGENT_TEAMS_AUTO_CLEANUP": "true"
@@ -52,6 +52,11 @@
           {
             "type": "command",
             "command": ".claude/hooks/branch-guard.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/bash-file-guard.sh",
             "timeout": 10
           }
         ]

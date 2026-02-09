@@ -39,11 +39,21 @@ if grep -q "GATE.*Do NOT proceed" CLAUDE.md; then
 else
   fail "Phase gates missing — no enforcement between phases"
 fi
+if grep -q "Anti-Bypass Rules" CLAUDE.md; then
+  pass "Anti-Bypass Rules section found"
+else
+  fail "Anti-Bypass Rules section missing — bypass protections not documented"
+fi
+if grep -q "CRITICAL TRANSITION RULE" CLAUDE.md; then
+  pass "Brainstorm-to-implementation transition rule found"
+else
+  fail "Brainstorm-to-implementation transition rule missing"
+fi
 echo ""
 
 # ---- 3. Hooks exist and are executable ----
 echo "3. Hooks"
-for hook in .claude/hooks/sdlc-gate.sh .claude/hooks/branch-guard.sh .claude/hooks/lint-python.sh; do
+for hook in .claude/hooks/sdlc-gate.sh .claude/hooks/branch-guard.sh .claude/hooks/lint-python.sh .claude/hooks/bash-file-guard.sh; do
   if [[ -f "$hook" ]]; then
     pass "$hook exists"
     if [[ -x "$hook" ]]; then
@@ -57,7 +67,7 @@ for hook in .claude/hooks/sdlc-gate.sh .claude/hooks/branch-guard.sh .claude/hoo
 done
 echo ""
 
-# ---- 4. settings.json wires hooks correctly ----
+# ---- 4. Hook wiring (settings.json) ----
 echo "4. Hook wiring (settings.json)"
 if [[ -f ".claude/settings.json" ]]; then
   pass ".claude/settings.json exists"
@@ -80,6 +90,11 @@ if [[ -f ".claude/settings.json" ]]; then
     pass "branch-guard.sh wired in settings"
   else
     fail "branch-guard.sh not referenced in settings — branch protection off"
+  fi
+  if grep -q "bash-file-guard.sh" .claude/settings.json; then
+    pass "bash-file-guard.sh wired in settings"
+  else
+    fail "bash-file-guard.sh not referenced in settings — Bash redirect bypass not blocked"
   fi
 else
   fail ".claude/settings.json missing"
@@ -177,19 +192,19 @@ done
 if [[ -f ".claude/settings.json" ]]; then
   TEAMS_ENABLED=$(jq -r '.env.AGENT_TEAMS_ENABLED // "not set"' .claude/settings.json 2>/dev/null)
   if [[ "$TEAMS_ENABLED" == "true" ]]; then
-    warn "Agent teams ENABLED in settings — experimental feature is active"
+    pass "Agent teams ENABLED in settings (default — parallel implementation active)"
   elif [[ "$TEAMS_ENABLED" == "false" ]]; then
-    pass "Agent teams disabled in settings (default — enable with AGENT_TEAMS_ENABLED=true)"
+    warn "Agent teams disabled in settings — parallel implementation unavailable"
   else
-    warn "Agent teams config not found in settings.json env block"
+    fail "Agent teams config not found in settings.json env block"
   fi
   TEAMS_ENFORCE=$(jq -r '.env.AGENT_TEAMS_ENFORCE // "not set"' .claude/settings.json 2>/dev/null)
   if [[ "$TEAMS_ENFORCE" == "true" ]]; then
-    warn "Agent teams ENFORCE mode is ON — Claude will require /parallel-implement for multi-story waves"
+    pass "Agent teams ENFORCE mode ON (default — /parallel-implement required for multi-story waves)"
   elif [[ "$TEAMS_ENFORCE" == "false" ]]; then
-    pass "Agent teams enforce mode off (default — sequential /implement used)"
+    warn "Agent teams enforce mode off — sequential /implement used even for multi-story waves"
   else
-    warn "AGENT_TEAMS_ENFORCE not found in settings.json env block"
+    fail "AGENT_TEAMS_ENFORCE not found in settings.json env block"
   fi
   if grep -q "worktree-guard.sh" .claude/settings.json; then
     pass "worktree-guard.sh wired in settings"
@@ -260,6 +275,88 @@ if grep -q "e2e" .claude/agents/test-writer.yaml 2>/dev/null; then
   pass "Test-writer agent supports E2E tests"
 else
   warn "Test-writer agent does not reference E2E tests"
+fi
+echo ""
+
+# ---- 11. Hardened gate validation ----
+echo "11. Hardened SDLC gates"
+
+# Check sdlc-gate.sh has content validation
+if grep -q "REQ_LINE_COUNT" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh validates requirements content length"
+else
+  fail "sdlc-gate.sh does NOT validate requirements content — stubs can bypass"
+fi
+if grep -q "SECTION_COUNT" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh validates requirements section headings"
+else
+  fail "sdlc-gate.sh does NOT validate section headings — stubs can bypass"
+fi
+if grep -q "VALID_STORY_FOUND" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh validates story file content"
+else
+  fail "sdlc-gate.sh does NOT validate story content — stubs can bypass"
+fi
+
+# Check expanded path coverage (not just src/ and tests/)
+if grep -q '\.py.*\.ts.*\.tsx.*\.js.*\.jsx' .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh gates all code file types (.py/.ts/.tsx/.js/.jsx)"
+else
+  fail "sdlc-gate.sh does NOT gate all code file types"
+fi
+
+# Check conditional __init__.py
+if grep -q 'LINE_COUNT.*-le 5' .claude/hooks/sdlc-gate.sh 2>/dev/null || \
+   grep -q '__init__.py.*tests/' .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh has conditional __init__.py handling"
+else
+  fail "sdlc-gate.sh blanket-allows __init__.py — no content check"
+fi
+
+# Check bash-file-guard.sh exists, executable, wired
+if [[ -f ".claude/hooks/bash-file-guard.sh" ]]; then
+  pass "bash-file-guard.sh exists"
+  if [[ -x ".claude/hooks/bash-file-guard.sh" ]]; then
+    pass "bash-file-guard.sh is executable"
+  else
+    fail "bash-file-guard.sh is NOT executable"
+  fi
+  if grep -q "bash-file-guard.sh" .claude/settings.json 2>/dev/null; then
+    pass "bash-file-guard.sh wired in settings.json"
+  else
+    fail "bash-file-guard.sh NOT wired in settings.json — Bash redirects can bypass gates"
+  fi
+  if grep -q "docs/requirements" .claude/hooks/bash-file-guard.sh 2>/dev/null; then
+    pass "bash-file-guard.sh blocks redirects to docs/requirements.md"
+  else
+    fail "bash-file-guard.sh does NOT block redirects to requirements"
+  fi
+  if grep -q "docs/backlog" .claude/hooks/bash-file-guard.sh 2>/dev/null; then
+    pass "bash-file-guard.sh blocks redirects to docs/backlog/"
+  else
+    fail "bash-file-guard.sh does NOT block redirects to backlog"
+  fi
+  if grep -q "docs/test-plans" .claude/hooks/bash-file-guard.sh 2>/dev/null; then
+    pass "bash-file-guard.sh blocks redirects to docs/test-plans/"
+  else
+    fail "bash-file-guard.sh does NOT block redirects to test-plans"
+  fi
+else
+  fail "bash-file-guard.sh missing — Bash redirect bypass not protected"
+fi
+
+# Check test plan gate for src/
+if grep -q "test-plans.*STORY" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh requires test plan for src/ writes"
+else
+  fail "sdlc-gate.sh does NOT require test plan for src/ writes"
+fi
+
+# Check implement.md has pre-flight
+if grep -q "Pre-flight Verification" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement has Phase 0 pre-flight verification"
+else
+  fail "/implement missing Phase 0 pre-flight — prerequisites not checked"
 fi
 echo ""
 

@@ -4,14 +4,20 @@
 
 **BLOCKING REQUIREMENT**: You MUST follow this workflow for ALL implementation tasks. You are FORBIDDEN from writing production code or tests without completing the prior steps. If a user says "implement X" or "build Y" or gives you a plan, you MUST still follow this workflow — do NOT skip steps.
 
-### Phase 0: Session Start
+### Phase 0: Session Start & Brainstorming
 - Run `/gogogo` at the start of every session
-- If no backlog exists, tell the user: "No stories found. Run `/interview` first."
+- Brainstorming, discussing ideas, exploring architecture, and asking questions is ALWAYS welcome
+- **CRITICAL TRANSITION RULE**: When the conversation shifts from "exploring ideas" to "let's build this":
+  → Route through `/interview` to capture brainstorming output as structured requirements
+  → NEVER jump from brainstorming directly to writing code
+  → NEVER create stub documents to bypass gates — hooks validate content, not just existence
+- If no backlog exists, tell the user: "Let's capture these ideas. Run `/interview` to turn them into requirements."
 
 ### Phase 1: Requirements (MUST complete before Phase 2)
 - Run `/interview` to gather structured requirements
 - Output: `docs/requirements.md`
 - **GATE**: Do NOT proceed to Phase 2 without a requirements document
+- **CONTENT GATE**: `docs/requirements.md` must have >= 10 lines and at least 2 of these sections: `## Problem Statement`, `## Functional Requirements`, `## Target Users`, `## Non-Functional Requirements`
 
 ### Phase 2: Decomposition & Architecture (MUST complete before Phase 3)
 - Run `/decompose docs/requirements.md` to break into epics and stories
@@ -20,14 +26,24 @@
 - Generate `docs/architecture.md` (C4 diagrams)
 - Generate ADRs in `docs/adr/` for key technical decisions
 - **GATE**: Do NOT proceed to Phase 3 without stories in `docs/backlog/`
+- **CONTENT GATE**: Each story must have >= 8 lines and include `## User Story` or `## Acceptance Criteria` + `## Dependencies` headings
 
 ### Phase 3: Implementation
 
 **Implementation Mode** is controlled by `AGENT_TEAMS_ENFORCE` in `.claude/settings.json`:
-- `"false"` (default) → **Sequential mode**: one story at a time via `/implement`
-- `"true"` → **Agent Teams mode**: parallel implementation via `/parallel-implement` for waves with 2+ independent stories
+- `"true"` (default) → **Agent Teams mode**: parallel implementation via `/parallel-implement` for waves with 2+ independent stories
+- `"false"` → **Sequential mode**: one story at a time via `/implement`
 
-#### Sequential Mode (default — `AGENT_TEAMS_ENFORCE=false`)
+#### Agent Teams Mode (default — `AGENT_TEAMS_ENFORCE=true`)
+- **MANDATORY**: When a wave in `docs/backlog/parallel-batches.md` has 2+ Ready stories, you MUST use `/parallel-implement wave-N` (not sequential `/implement`)
+- Single-story waves still use `/implement` (no benefit to parallelization)
+- Process waves in order: Wave 1 must complete before Wave 2 starts
+- Within each wave, ALL independent stories run in parallel via agent teammates
+- **DEPENDENCY RULE**: Stories with `depends_on` relationships NEVER run in the same wave — the topological sort guarantees this, but verify before spawning teammates
+- **GATE**: ALL stories in a wave must pass CI before the next wave starts
+- If agent teams fail, fall back to `/parallel-manual` for that wave, then `/implement` as last resort
+
+#### Sequential Mode (fallback — `AGENT_TEAMS_ENFORCE=false`)
 - Pick the next ready story from `docs/backlog/implementation-order.md`
 - Create feature branch: `git checkout -b feature/STORY-XXX-short-description`
 - Run `/implement docs/backlog/[epic]/[story-id].md` which enforces:
@@ -37,15 +53,6 @@
   4. **VALIDATE**: Run `make ci`, verify coverage >= 80%
 - **GATE**: Do NOT start the next story until current story passes CI
 - Parallel commands (`/parallel-manual`, `/parallel-implement`) are available but optional
-
-#### Agent Teams Mode (enforced — `AGENT_TEAMS_ENFORCE=true`)
-- **MANDATORY**: When a wave in `docs/backlog/parallel-batches.md` has 2+ Ready stories, you MUST use `/parallel-implement wave-N` (not sequential `/implement`)
-- Single-story waves still use `/implement` (no benefit to parallelization)
-- Process waves in order: Wave 1 must complete before Wave 2 starts
-- Within each wave, ALL independent stories run in parallel via agent teammates
-- **DEPENDENCY RULE**: Stories with `depends_on` relationships NEVER run in the same wave — the topological sort guarantees this, but verify before spawning teammates
-- **GATE**: ALL stories in a wave must pass CI before the next wave starts
-- If agent teams fail, fall back to `/parallel-manual` for that wave, then `/implement` as last resort
 
 #### Dependency Safety (applies to ALL modes)
 - Each story file has a `## Dependencies` section with `depends_on:` and `blocks:` lists
@@ -69,7 +76,14 @@
 - NEVER write implementation code directly in `main` branch
 - EVERY implementation task goes through `/implement` or `/parallel-implement` (TDD Red-Green-Refactor)
 - **Dependency enforcement**: NEVER start a story whose `depends_on` list contains unfinished stories
-- **Mode enforcement**: If `AGENT_TEAMS_ENFORCE=true`, you MUST use `/parallel-implement` for waves with 2+ Ready stories — do NOT fall back to sequential `/implement` unless agent teams fail
+- **Mode enforcement**: If `AGENT_TEAMS_ENFORCE=true` (default), you MUST use `/parallel-implement` for waves with 2+ Ready stories — do NOT fall back to sequential `/implement` unless agent teams fail
+
+### Anti-Bypass Rules (Hook-Enforced)
+- **No stub documents**: `sdlc-gate.sh` validates content, not just file existence. Requirements need >= 10 lines + section headings. Stories need >= 8 lines + required sections.
+- **No Bash redirect bypass**: `bash-file-guard.sh` blocks `echo/printf/cat` redirects targeting `docs/requirements.md`, `docs/backlog/`, `docs/test-plans/`, and code files (.py/.ts/.tsx/.js/.jsx).
+- **Expanded file coverage**: SDLC gates apply to ALL code files (.py/.ts/.tsx/.js/.jsx), not just `src/` and `tests/`. Exempt paths: `docs/`, `.claude/`, `.github/`, `scripts/`, config files.
+- **Conditional `__init__.py`**: Allowed in `tests/` always. In `src/`, only allowed if <= 5 lines (package marker). Larger `__init__.py` must pass all SDLC gates.
+- **Test plan required for src/**: Writing to `src/` requires a test plan in `docs/test-plans/STORY-XXX-*` (derived from branch name). Writing to `tests/` is allowed without a test plan (RED phase = test-first).
 
 ## Tech Stack
 - Backend: Python 3.12 / FastAPI / SQLAlchemy
@@ -157,16 +171,16 @@ MUST verify before finishing ANY TypeScript/React file:
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `AGENT_TEAMS_ENABLED` | `"false"` | Unlocks `/parallel-implement` command |
-| `AGENT_TEAMS_ENFORCE` | `"false"` | When `"true"`, FORCES parallel implementation for multi-story waves |
+| `AGENT_TEAMS_ENABLED` | `"true"` | Unlocks `/parallel-implement` command |
+| `AGENT_TEAMS_ENFORCE` | `"true"` | When `"true"`, FORCES parallel implementation for multi-story waves |
 | `AGENT_TEAMS_MAX_TEAMMATES` | `"3"` | Max concurrent teammates per wave |
 
 **Also requires:** environment variable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
 
 **Enabling modes:**
-- **Sequential only** (default): both `ENABLED` and `ENFORCE` are `"false"` — only `/implement` is used
-- **Parallel available**: set `ENABLED=true` — `/parallel-implement` is available but optional
-- **Parallel enforced**: set both `ENABLED=true` AND `ENFORCE=true` — Claude MUST use `/parallel-implement` for waves with 2+ independent stories
+- **Parallel enforced** (default): both `ENABLED` and `ENFORCE` are `"true"` — Claude MUST use `/parallel-implement` for waves with 2+ independent stories
+- **Parallel available**: set `ENFORCE=false` — `/parallel-implement` is available but optional
+- **Sequential only**: set both `ENABLED` and `ENFORCE` to `"false"` — only `/implement` is used
 
 **Cost considerations:**
 - Each teammate uses ~7x the tokens of a single `/implement` run
@@ -213,7 +227,7 @@ MUST verify before finishing ANY TypeScript/React file:
 - `/test-plan <story-file>` — Generate test plan with test cases, test data, and E2E scenarios from story
 - `/implement <story-file>` — TDD Red->Green->Refactor cycle for a story (sequential)
 - `/parallel-manual <wave|stories>` — Set up git worktrees for manual parallel implementation (stable)
-- `/parallel-implement <wave|stories>` — Agent teams parallel implementation (experimental, requires opt-in)
+- `/parallel-implement <wave|stories>` — Agent teams parallel implementation (default for multi-story waves)
 - `/pr` — Run CI, generate PR description, create PR
 - `/review <pr-number>` — Review a PR against 12-point checklist
 - `/diagnose <failure-report>` — Diagnose test failures and create hotfix

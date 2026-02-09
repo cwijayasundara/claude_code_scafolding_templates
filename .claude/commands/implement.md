@@ -2,7 +2,18 @@
 
 Read the user story at $ARGUMENTS.
 
-Follow the TDD Red → Green → Refactor cycle:
+## Phase 0: Pre-flight Verification
+
+Before starting TDD, verify ALL prerequisites are met:
+
+1. **Requirements content check**: Read `docs/requirements.md` — verify it has >= 10 lines and at least 2 of these sections: `## Problem Statement`, `## Functional Requirements`, `## Target Users`, `## Non-Functional Requirements`. If it's a stub or missing, STOP and run `/interview`.
+2. **Story content check**: Read the story file — verify it has >= 8 lines and includes `## User Story` or `## Acceptance Criteria` + `## Dependencies` headings. If it's a stub, STOP and run `/decompose`.
+3. **Test plan check**: Check if `docs/test-plans/[story-id]-test-plan.md` exists. If not, run `/test-plan [story-file]` before proceeding.
+4. **Feature branch check**: Verify you are on a `feature/*` branch. If on main/master, create one: `git checkout -b feature/STORY-XXX-short-description`.
+5. **Dependency check**: Read the story's `## Dependencies` section. Verify ALL stories in `depends_on:` are Done. If any are not Done, STOP and report which dependencies are blocking.
+6. **Agent Teams check**: Read `AGENT_TEAMS_ENFORCE` from `.claude/settings.json` env block. If `"true"`, check if this story is in a wave with 2+ Ready stories in `docs/backlog/parallel-batches.md`. If yes, STOP and redirect: "This story is in a multi-story wave. Use `/parallel-implement wave-N` instead."
+
+All checks must pass before proceeding to Phase 1.
 
 ## Phase 1: RED (Failing Tests)
 1. Read the story's acceptance criteria
