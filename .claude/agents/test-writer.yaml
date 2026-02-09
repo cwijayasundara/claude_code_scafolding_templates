@@ -49,9 +49,10 @@ instructions: |
   - Use Faker for realistic test data (emails, names, dates)
   - Create seed data helpers in tests/seed_data.py for integration/E2E tests
 
-  ## E2E Tests (Playwright)
+  ## E2E Tests (Playwright) — MANDATORY for frontend/fullstack
   For stories with `frontend` or `fullstack` expertise tag:
-  - Write Playwright tests in tests/e2e/ using pytest-playwright
+  - You MUST write Playwright tests in tests/e2e/ using pytest-playwright
+  - Use the test plan's **Playwright Test Skeletons** as your starting point
   - Use the Playwright MCP server (configured in .mcp.json) to validate selectors
   - Follow the test plan's E2E scenarios table for user journeys
   - Structure:
@@ -59,7 +60,7 @@ instructions: |
     import pytest
     from playwright.async_api import Page, expect
 
-    BASE_URL = os.environ.get("STAGING_URL", "http://localhost:8000")
+    BASE_URL = os.environ.get("STAGING_URL", "http://localhost:3000")
 
     @pytest.mark.e2e
     async def test_user_login_with_valid_credentials_shows_dashboard(page: Page):
@@ -73,6 +74,43 @@ instructions: |
   - Use `data-testid` attributes for selectors (not CSS classes or IDs)
   - Include screenshot-on-failure in conftest.py E2E fixture
   - Test both happy paths and error states (invalid login, missing fields)
+  - Each E2E test MUST use Playwright's `page` API — `page.goto()`, `page.fill()`, `page.click()`, `expect()`
+
+  ## ANTI-PATTERNS — NEVER DO THESE
+  - **NEVER use static file analysis as a substitute for tests**:
+    - BAD: Reading a `.tsx` file with Python `open()` and checking for string patterns like `"AbortSignal.timeout"` or `"useEffect"`
+    - BAD: Using regex to validate that source code contains certain keywords
+    - BAD: `assert "EventSource" in Path("frontend/src/components/Stream.tsx").read_text()`
+    - These validate code STRUCTURE, not BEHAVIOR — they are NOT tests
+  - **NEVER skip E2E tests for frontend/fullstack stories** — the test plan specifies E2E scenarios for a reason
+  - **NEVER create empty test files** or test files with only `pass` or `# TODO`
+  - **GOOD**: Playwright tests that navigate pages, fill forms, click buttons, and assert visible results
+  - **GOOD**: React Testing Library tests that `render()` components and assert DOM output
+  - **GOOD**: `await expect(page.locator("[data-testid=result]")).to_contain_text("Success")`
+
+  ## Frontend Component Tests (React Testing Library)
+  For React components, write component-level tests using @testing-library/react:
+  - Test file location: `frontend/src/components/<Component>.test.tsx` or `tests/unit/test_<component>.tsx`
+  - Use `render()`, `screen.getByTestId()`, `screen.getByRole()`, `userEvent.click()`
+  - These are DISTINCT from E2E tests — component tests test isolated rendering, E2E tests test full user journeys
+  - Structure:
+    ```typescript
+    import { render, screen } from '@testing-library/react';
+    import userEvent from '@testing-library/user-event';
+    import { ResearchForm } from './ResearchForm';
+
+    describe('ResearchForm', () => {
+      it('submits topic when form is filled and submitted', async () => {
+        const onSubmit = vi.fn();
+        render(<ResearchForm onSubmit={onSubmit} />);
+
+        await userEvent.type(screen.getByTestId('topic-input'), 'AI research');
+        await userEvent.click(screen.getByTestId('submit-button'));
+
+        expect(onSubmit).toHaveBeenCalledWith('AI research');
+      });
+    });
+    ```
 
   ## Test Naming
   Use descriptive names: `test_<what>_<when>_<expected>`

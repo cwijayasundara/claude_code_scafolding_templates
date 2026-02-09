@@ -48,9 +48,11 @@ Identify integration points from the story (API calls, database queries, externa
 | IT-002 | ... | ... | ... | AC-2 |
 ```
 
-## Step 4: Generate E2E Test Scenarios (if frontend/fullstack)
+## Step 4: Generate E2E Test Scenarios (MANDATORY for frontend/fullstack)
 
-For stories with UI components, generate Playwright E2E test scenarios:
+For stories with `frontend` or `fullstack` expertise tag, you MUST generate Playwright E2E test scenarios. This is NOT optional — skipping this step blocks implementation.
+
+### Step 4a: E2E Scenario Table
 
 ```markdown
 ### E2E Tests (Playwright)
@@ -61,11 +63,67 @@ For stories with UI components, generate Playwright E2E test scenarios:
 | E2E-002 | ... | ... | ... | AC-2 |
 ```
 
-Each E2E scenario includes:
+Each E2E scenario MUST include:
 - **Pre-conditions**: what state the app must be in
 - **Steps**: user actions (navigate, click, fill, select)
 - **Assertions**: what the user should see (text, element, URL)
 - **Cleanup**: any teardown needed
+- **Selectors**: list of `data-testid` attributes the test will target
+
+### Step 4b: Playwright Test Skeleton (MANDATORY)
+
+For each E2E scenario in the table, generate a ready-to-implement Playwright test skeleton in the test plan. This skeleton is what the test-writer agent will use during `/implement` Phase 1.
+
+```markdown
+### Playwright Test Skeletons
+
+#### E2E-001: test_<user_journey>_<expected>
+\`\`\`python
+import pytest
+from playwright.async_api import Page, expect
+
+BASE_URL = "http://localhost:3000"
+
+@pytest.mark.e2e
+async def test_<user_journey>_<expected>(page: Page):
+    """Given <pre-condition>, when <user actions>, then <expected>."""
+    # Setup
+    await page.goto(f"{BASE_URL}/<path>")
+
+    # Action
+    await page.fill("[data-testid=<field>]", "<value>")
+    await page.click("[data-testid=<button>]")
+
+    # Assertion
+    await expect(page.locator("[data-testid=<result>]")).to_be_visible()
+    await expect(page.locator("[data-testid=<result>]")).to_contain_text("<expected text>")
+\`\`\`
+
+#### Required `data-testid` attributes
+| Component | Selector | Purpose |
+|-----------|----------|---------|
+| <Component> | `data-testid="<name>"` | Target for E2E test |
+```
+
+**CRITICAL**: The skeletons MUST use Playwright's `page` API (`page.goto`, `page.fill`, `page.click`, `expect`). Static file analysis (reading `.tsx` source and checking for string patterns) is NOT a valid E2E test.
+
+### Step 4c: Frontend Component Tests (MANDATORY for React)
+
+For React components, generate component-level test scenarios using `@testing-library/react`:
+
+```markdown
+### Component Tests (React Testing Library)
+
+| ID | Component | Renders | Interactions | Assertions | Criteria |
+|----|-----------|---------|-------------|------------|----------|
+| CT-001 | <ComponentName> | With props X | Click button Y | Shows text Z | AC-1 |
+```
+
+These are unit-level tests for individual React components, distinct from E2E tests:
+- Use `render()` from `@testing-library/react` — NOT Python file reading
+- Use `screen.getByTestId()`, `screen.getByRole()` for assertions
+- Use `userEvent` or `fireEvent` for interactions
+- Test file: `frontend/src/components/<Component>.test.tsx` or `tests/unit/test_<component>.tsx`
 
 ## Step 5: Define Test Data Requirements
 

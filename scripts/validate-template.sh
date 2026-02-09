@@ -510,6 +510,66 @@ else
 fi
 echo ""
 
+# ---- 16. Playwright enforcement and anti-patterns ----
+echo "16. Playwright enforcement and anti-patterns"
+
+# Check /implement defines valid Playwright test criteria
+if grep -q "page.goto.*page.fill.*page.click\|page.goto.*page.click.*expect" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement defines what counts as a valid Playwright test"
+else
+  fail "/implement does NOT define valid Playwright test criteria"
+fi
+
+# Check /implement bans static file analysis
+if grep -q "BANNED anti-patterns\|static file analysis" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement bans static file analysis as E2E substitute"
+else
+  fail "/implement does NOT ban static file analysis — Claude may read .tsx files instead of writing Playwright tests"
+fi
+
+# Check test-writer agent has anti-pattern rules
+if grep -q "ANTI-PATTERNS\|NEVER use static file analysis" .claude/agents/test-writer.yaml 2>/dev/null; then
+  pass "test-writer agent has anti-pattern rules"
+else
+  fail "test-writer agent missing anti-pattern rules — may write static analysis instead of real tests"
+fi
+
+# Check test-writer agent mentions React Testing Library
+if grep -q "testing-library/react\|@testing-library" .claude/agents/test-writer.yaml 2>/dev/null; then
+  pass "test-writer agent includes React Testing Library guidance"
+else
+  fail "test-writer agent missing React Testing Library — frontend components won't have proper unit tests"
+fi
+
+# Check /test-plan generates Playwright skeletons
+if grep -q "Playwright Test Skeleton" .claude/commands/test-plan.md 2>/dev/null; then
+  pass "/test-plan generates Playwright test skeletons for frontend stories"
+else
+  fail "/test-plan does NOT generate Playwright skeletons — test-writer has no code to start from"
+fi
+
+# Check /test-plan has component test section
+if grep -q "Component Tests.*React Testing Library\|Frontend Component Tests" .claude/commands/test-plan.md 2>/dev/null; then
+  pass "/test-plan includes React component test scenarios"
+else
+  fail "/test-plan missing React component test section"
+fi
+
+# Check CLAUDE.md documents Playwright validity enforcement
+if grep -q "Playwright validity enforcement" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents Playwright validity enforcement"
+else
+  fail "CLAUDE.md does not document Playwright validity enforcement"
+fi
+
+# Check CLAUDE.md documents frontend component test enforcement
+if grep -q "Frontend component test enforcement\|frontend component test enforcement" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents frontend component test enforcement"
+else
+  fail "CLAUDE.md does not document frontend component test enforcement"
+fi
+echo ""
+
 # ---- Summary ----
 echo "=== Summary ==="
 echo "  PASS: $PASS"

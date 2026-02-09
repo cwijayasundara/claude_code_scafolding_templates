@@ -28,10 +28,10 @@ All checks must pass before proceeding to Phase 1.
    - **Fixtures**: If the test plan lists fixtures, add them to `tests/conftest.py` (shared) or the relevant test file
    - **Seed data**: If the test plan lists seed datasets for integration/E2E, create them in `tests/fixtures/` or as pytest fixtures
    - **GATE**: Do NOT proceed to step 5 until every factory, fixture, and seed dataset listed in the test plan exists as actual code
-5. **E2E test scripts (MANDATORY for frontend/fullstack)**: Read the story's `## Expertise` tag.
+5. **E2E Playwright test scripts (MANDATORY for frontend/fullstack)**: Read the story's `## Expertise` tag.
    If the tag is `frontend` or `fullstack`:
    - You MUST write Playwright E2E test scripts in `tests/e2e/` — this is NOT optional
-   - Use the test plan's **E2E Tests** section for scenarios
+   - Use the test plan's **Playwright Test Skeletons** as your starting point
    - Each acceptance criterion with a UI component MUST have at least one E2E test
    - Playwright MCP server is configured in `.mcp.json` — use it to validate selectors and user flows
    - E2E test structure:
@@ -44,7 +44,18 @@ All checks must pass before proceeding to Phase 1.
          await page.click("[data-testid=submit]")
          await expect(page.locator("[data-testid=result]")).to_be_visible()
      ```
-   - **GATE**: Do NOT proceed to step 6 if expertise is `frontend` or `fullstack` and `tests/e2e/` has no test scripts (only `__init__.py` does NOT count)
+   - **What counts as a valid Playwright E2E test**:
+     - MUST use `page.goto()`, `page.fill()`, `page.click()`, or `expect()` from Playwright
+     - MUST use `data-testid` selectors (not CSS classes, IDs, or XPath)
+     - MUST be marked with `@pytest.mark.e2e`
+     - MUST test actual user behavior (navigation, form submission, visual assertions)
+   - **What does NOT count (BANNED anti-patterns)**:
+     - Reading `.tsx`/`.ts` source files with Python `open()` or `Path().read_text()` and checking for string patterns
+     - Using regex to assert source code contains keywords like `"useEffect"` or `"AbortSignal"`
+     - Any test that validates code structure instead of runtime behavior
+     - A `tests/e2e/` directory with only `__init__.py` or empty test files
+   - **GATE**: Do NOT proceed to step 6 if expertise is `frontend` or `fullstack` and `tests/e2e/` has no valid Playwright test scripts
+   - **Frontend component tests**: For React components, also write component-level tests using `@testing-library/react` (`render`, `screen`, `userEvent`) in `frontend/src/components/*.test.tsx` or `tests/unit/`. These test isolated component behavior and are DISTINCT from E2E tests.
 6. Verify ALL new tests FAIL (they must — no implementation yet)
 7. **RED phase artifact checklist** — verify before committing:
    - [ ] Unit test files exist in `tests/unit/` for this story
@@ -94,10 +105,12 @@ Apply CLAUDE.md Pre-Completion Checklist to every file changed:
 4. Verify Pre-Completion Checklist from CLAUDE.md (all 12 items) is satisfied
 5. **Test artifact checklist** — ALL must be satisfied before PR:
    - [ ] Unit tests exist and pass for every new function/method
-   - [ ] Integration tests exist and pass for every API endpoint / service boundary
+   - [ ] Integration tests exist in `tests/integration/` with `@pytest.mark.integration` for every API endpoint / service boundary
    - [ ] Test data artifacts (factories, fixtures, seed data) from the test plan are implemented as code — not just documented in the plan
-   - [ ] E2E Playwright test scripts exist in `tests/e2e/` with real assertions (if story expertise is `frontend` or `fullstack`)
+   - [ ] E2E Playwright test scripts exist in `tests/e2e/` using `page.goto()`, `page.fill()`, `page.click()`, `expect()` (if story expertise is `frontend` or `fullstack`)
+   - [ ] E2E tests are NOT static file analysis — they must test runtime behavior via Playwright, not read `.tsx` source with Python
    - [ ] E2E tests cover every acceptance criterion that has a user-facing UI element
+   - [ ] Frontend component tests use `@testing-library/react` (`render`, `screen`, `userEvent`) — not Python source file reading
    - [ ] `tests/conftest.py` has shared fixtures — no duplicated setup across test files
    - [ ] Traceability: every acceptance criterion in the story maps to at least one passing test
    - If ANY item is not satisfied, STOP and fix it before proceeding to `/pr`

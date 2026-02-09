@@ -114,6 +114,8 @@ When summarizing or explaining this workflow, include ALL of these steps — do 
 - **Asset enforcement**: If a story's `## Asset Dependencies` section lists ANY item with status `missing`, the story is Blocked — do NOT start implementation until all assets are `available`
 - **Test data enforcement**: Every factory, fixture, and seed dataset listed in a story's test plan (`docs/test-plans/`) MUST be implemented as actual code (in `tests/conftest.py`, `tests/factories.py`, or `tests/fixtures/`) — not just documented in the plan. `/implement` Phase 1 and Phase 3 both validate this.
 - **E2E test enforcement**: Stories with `frontend` or `fullstack` expertise tags MUST have Playwright E2E test scripts in `tests/e2e/` with real assertions. A directory with only `__init__.py` does NOT satisfy this gate. `/implement` blocks progression at Phase 1 step 5 and validates again at Phase 4.
+- **Playwright validity enforcement**: E2E tests MUST use Playwright's `page` API (`page.goto`, `page.fill`, `page.click`, `expect`). Static file analysis (reading `.tsx` source with Python and regex-matching patterns) is BANNED — it tests code structure, not behavior.
+- **Frontend component test enforcement**: React components must be tested with `@testing-library/react` (`render`, `screen`, `userEvent`), not by reading source files with Python `open()`.
 - **Traceability enforcement**: Every acceptance criterion in a story must map to at least one passing test. `/implement` Phase 4 validates this before allowing `/pr`.
 
 ### Anti-Bypass Rules (Hook-Enforced)
