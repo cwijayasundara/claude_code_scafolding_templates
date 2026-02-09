@@ -11,6 +11,7 @@
   → Route through `/interview` to capture brainstorming output as structured requirements
   → NEVER jump from brainstorming directly to writing code
   → NEVER create stub documents to bypass gates — hooks validate content, not just existence
+- **Spike mode**: For time-boxed technical exploration (evaluate a library, prototype an approach), use `/spike` instead of the full SDLC. Spike branches (`spike/*`) bypass SDLC gates but CANNOT be merged or PR'd — findings must be converted to stories via `/interview`.
 - If no backlog exists, tell the user: "Let's capture these ideas. Run `/interview` to turn them into requirements."
 
 ### Phase 1: Requirements (MUST complete before Phase 2)
@@ -27,6 +28,7 @@
 - Generate ADRs in `docs/adr/` for key technical decisions
 - **GATE**: Do NOT proceed to Phase 3 without stories in `docs/backlog/`
 - **CONTENT GATE**: Each story must have >= 8 lines and include `## User Story` or `## Acceptance Criteria` + `## Dependencies` headings
+- **ASSET GATE**: If any story has an `## Asset Dependencies` section with `missing` items, that story is **Blocked** until assets are provided. `/implement` checks this before starting.
 
 ### Phase 3: Implementation
 
@@ -77,6 +79,7 @@
 - EVERY implementation task goes through `/implement` or `/parallel-implement` (TDD Red-Green-Refactor)
 - **Dependency enforcement**: NEVER start a story whose `depends_on` list contains unfinished stories
 - **Mode enforcement**: If `AGENT_TEAMS_ENFORCE=true` (default), you MUST use `/parallel-implement` for waves with 2+ Ready stories — do NOT fall back to sequential `/implement` unless agent teams fail
+- **Asset enforcement**: If a story's `## Asset Dependencies` section lists ANY item with status `missing`, the story is Blocked — do NOT start implementation until all assets are `available`
 
 ### Anti-Bypass Rules (Hook-Enforced)
 - **No stub documents**: `sdlc-gate.sh` validates content, not just file existence. Requirements need >= 10 lines + section headings. Stories need >= 8 lines + required sections.
@@ -84,6 +87,7 @@
 - **Expanded file coverage**: SDLC gates apply to ALL code files (.py/.ts/.tsx/.js/.jsx), not just `src/` and `tests/`. Exempt paths: `docs/`, `.claude/`, `.github/`, `scripts/`, config files.
 - **Conditional `__init__.py`**: Allowed in `tests/` always. In `src/`, only allowed if <= 5 lines (package marker). Larger `__init__.py` must pass all SDLC gates.
 - **Test plan required for src/**: Writing to `src/` requires a test plan in `docs/test-plans/STORY-XXX-*` (derived from branch name). Writing to `tests/` is allowed without a test plan (RED phase = test-first).
+- **Spike branch isolation**: `spike/*` branches bypass SDLC gates for free exploration, but `branch-guard.sh` blocks `git merge spike/*` and `gh pr create` on spike branches. Spike code NEVER reaches main — convert findings to stories via `/interview`.
 
 ## Tech Stack
 - Backend: Python 3.12 / FastAPI / SQLAlchemy
@@ -232,11 +236,13 @@ MUST verify before finishing ANY TypeScript/React file:
 - `/review <pr-number>` — Review a PR against 12-point checklist
 - `/diagnose <failure-report>` — Diagnose test failures and create hotfix
 - `/wrapup` — Session completion: commit, CI, push, handoff summary
+- `/spike <description>` — Time-boxed exploration: creates `spike/*` branch, suspends SDLC gates, blocks merge/PR
 - `/create-prompt` — Build a structured prompt using R.G.C.O.A. framework
 
 ## Sub-Agents
 - **test-writer** — TDD Red phase: writes failing tests from acceptance criteria
 - **code-reviewer** — 12-point quality review checklist (SOLID, duplication, error handling, security, dead code, React anti-patterns, helper tests)
+- **performance-reviewer** — 10-point performance checklist (N+1 queries, missing indexes, unbounded collections, memory leaks, bundle size, re-renders, pagination, connection pools)
 - **architect** — ADRs, C4 diagrams, tech evaluation
 
 ## Skills

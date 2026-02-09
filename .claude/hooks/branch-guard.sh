@@ -29,4 +29,20 @@ if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then
   fi
 fi
 
+# Block merging spike branches into any branch
+if echo "$COMMAND" | grep -qE 'merge\s+spike/'; then
+  echo "BLOCKED: Spike branches cannot be merged. Spike code is throwaway." >&2
+  echo "Run '/spike wrap' to capture findings, then '/interview' to create stories." >&2
+  exit 2
+fi
+
+# Block PR creation from spike branches
+if [[ "$BRANCH" == spike/* ]]; then
+  if echo "$COMMAND" | grep -qE 'gh\s+pr\s+create|gh\s+pr\s+ready'; then
+    echo "BLOCKED: Cannot create PRs from spike branches." >&2
+    echo "Run '/spike wrap' to capture findings, then '/interview' to create stories." >&2
+    exit 2
+  fi
+fi
+
 exit 0

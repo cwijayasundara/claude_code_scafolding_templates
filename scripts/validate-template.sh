@@ -103,7 +103,7 @@ echo ""
 
 # ---- 5. Custom commands exist ----
 echo "5. Custom commands"
-for cmd in gogogo interview decompose test-plan implement parallel-manual parallel-implement pr review diagnose wrapup; do
+for cmd in gogogo interview decompose test-plan implement parallel-manual parallel-implement pr review diagnose wrapup spike; do
   if [[ -f ".claude/commands/$cmd.md" ]]; then
     pass "/$ $cmd command exists"
   else
@@ -357,6 +357,93 @@ if grep -q "Pre-flight Verification" .claude/commands/implement.md 2>/dev/null; 
   pass "/implement has Phase 0 pre-flight verification"
 else
   fail "/implement missing Phase 0 pre-flight — prerequisites not checked"
+fi
+echo ""
+
+# ---- 12. Spike exploration mode ----
+echo "12. Spike exploration mode"
+if [[ -f ".claude/commands/spike.md" ]]; then
+  pass "/spike command exists"
+else
+  fail "/spike command missing"
+fi
+if grep -q "spike/" .claude/hooks/sdlc-gate.sh 2>/dev/null; then
+  pass "sdlc-gate.sh has spike branch exemption"
+else
+  fail "sdlc-gate.sh missing spike branch exemption — spike branches will be blocked"
+fi
+if grep -q "merge.*spike" .claude/hooks/branch-guard.sh 2>/dev/null; then
+  pass "branch-guard.sh blocks merging spike branches"
+else
+  fail "branch-guard.sh does NOT block spike merges — spike code could reach main"
+fi
+if grep -q "pr.*create.*spike\|spike.*pr.*create" .claude/hooks/branch-guard.sh 2>/dev/null; then
+  pass "branch-guard.sh blocks PR creation from spike branches"
+else
+  # Also check for the pattern where spike branch check wraps gh pr create
+  if grep -q 'spike/\*' .claude/hooks/branch-guard.sh 2>/dev/null && grep -q 'gh.*pr.*create' .claude/hooks/branch-guard.sh 2>/dev/null; then
+    pass "branch-guard.sh blocks PR creation from spike branches"
+  else
+    fail "branch-guard.sh does NOT block PR creation from spike branches"
+  fi
+fi
+if grep -q "Spike" CLAUDE.md 2>/dev/null || grep -q "spike" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md references spike mode"
+else
+  fail "CLAUDE.md does not mention spike mode"
+fi
+echo ""
+
+# ---- 13. Performance reviewer agent ----
+echo "13. Performance reviewer agent"
+if [[ -f ".claude/agents/performance-reviewer.yaml" ]]; then
+  pass "performance-reviewer.yaml exists"
+  if grep -q "name: performance-reviewer" .claude/agents/performance-reviewer.yaml 2>/dev/null; then
+    pass "performance-reviewer.yaml has correct name field"
+  else
+    fail "performance-reviewer.yaml missing name field"
+  fi
+  if grep -q "allowed_tools" .claude/agents/performance-reviewer.yaml 2>/dev/null; then
+    pass "performance-reviewer.yaml has allowed_tools"
+  else
+    fail "performance-reviewer.yaml missing allowed_tools"
+  fi
+  if grep -q "N+1\|N.1" .claude/agents/performance-reviewer.yaml 2>/dev/null; then
+    pass "performance-reviewer.yaml checks N+1 queries"
+  else
+    fail "performance-reviewer.yaml missing N+1 query check"
+  fi
+  if grep -q "pagination\|Pagination" .claude/agents/performance-reviewer.yaml 2>/dev/null; then
+    pass "performance-reviewer.yaml checks pagination"
+  else
+    fail "performance-reviewer.yaml missing pagination check"
+  fi
+else
+  fail "performance-reviewer.yaml missing"
+fi
+if grep -q "performance-reviewer" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md references performance-reviewer agent"
+else
+  fail "CLAUDE.md does not reference performance-reviewer agent"
+fi
+echo ""
+
+# ---- 14. Asset dependency gate ----
+echo "14. Asset dependency gate"
+if grep -q "Asset Dependencies" .claude/commands/decompose.md 2>/dev/null; then
+  pass "/decompose includes Asset Dependencies section in story template"
+else
+  fail "/decompose missing Asset Dependencies section — stories won't track external assets"
+fi
+if grep -q "Asset Dependencies\|asset.*missing\|Asset.*dependency\|asset dependency" .claude/commands/implement.md 2>/dev/null; then
+  pass "/implement checks asset dependencies before starting"
+else
+  fail "/implement does NOT check asset dependencies — blocked stories may start"
+fi
+if grep -q "ASSET GATE\|Asset.*enforcement\|asset enforcement" CLAUDE.md 2>/dev/null; then
+  pass "CLAUDE.md documents asset dependency gate"
+else
+  fail "CLAUDE.md does not document asset dependency gate"
 fi
 echo ""
 

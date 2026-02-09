@@ -55,6 +55,12 @@ if [[ "$BASENAME" == "__init__.py" ]]; then
   # Larger __init__.py falls through to SDLC gates
 fi
 
+# --- Spike branch exemption: skip all SDLC content gates ---
+BRANCH=$(git branch --show-current 2>/dev/null)
+if [[ "$BRANCH" == spike/* ]]; then
+  exit 0
+fi
+
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 
 # --- Gate 1: Requirements document must exist with real content ---

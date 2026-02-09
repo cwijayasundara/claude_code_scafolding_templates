@@ -37,6 +37,17 @@ Read the requirements document at $ARGUMENTS.
    - Given ... When ... Then ...
    - Given ... When ... Then ...
    - Given ... When ... Then ...
+
+   ## Asset Dependencies
+   _External assets required before implementation can start. Omit section if none._
+
+   | Asset | Type | Location | Status |
+   |-------|------|----------|--------|
+   | logo.svg | svg | src/assets/logo.svg | available |
+   | Stripe API key | api_key | .env STRIPE_SECRET_KEY | missing |
+
+   _Types: svg, api_key, design_mockup, sdk, data_file, other_
+   _Statuses: available, missing — any `missing` item blocks implementation_
    ```
 
    **CRITICAL RULE**: Two stories that have a dependency relationship (direct or transitive) MUST NOT appear in the same parallel wave. The topological sort in step 7 enforces this — but verify it explicitly.
