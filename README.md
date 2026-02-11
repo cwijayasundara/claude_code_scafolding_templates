@@ -2,7 +2,7 @@
 
 Production-ready Claude Code configuration that enforces a full SDLC workflow with gated phases, TDD, and automated quality checks. Supports sequential and parallel (agent teams) implementation with dependency-safe wave batching. Includes a **lite mode** for fast-track pipelines that keep safety guardrails while reducing ceremony.
 
-**Includes:** 12 slash commands, 6 enforcement rules (Python + TypeScript/React), 7 domain skills, 3 sub-agents, 7 hooks, starter permissions, and a 12-point code review checklist.
+**Includes:** 13 slash commands, 6 enforcement rules (Python + TypeScript/React), 7 domain skills, 4 sub-agents, 7 hooks, starter permissions, a 12-point code review checklist, and a structured test automation pipeline.
 
 ---
 
@@ -57,41 +57,56 @@ CLAUDE.md  >  Hooks  >  Rules  >  Sub-Agents  >  Skills
 The framework enforces a strict phase pipeline. Each phase has a **gate** that blocks progression until artifacts are produced. Hooks enforce the gates automatically — Claude cannot skip phases.
 
 ```
-  Phase 0         Phase 1          Phase 2              Phase 3
- ┌────────┐    ┌───────────┐    ┌──────────────┐    ┌──────────────────┐
- │/gogogo │───▶│/interview │───▶│ /decompose   │───▶│  /implement      │
- │        │    │           │    │ /test-plan   │    │  (TDD per story) │
- │ Load   │    │ Gather    │    │              │    │                  │
- │ context │    │ reqs      │    │ Break into   │    │  Red ──▶ Green   │
- │ + status│    │           │    │ epics/stories│    │    ──▶ Refactor  │
- └────────┘    └─────┬─────┘    │ + dep graph  │    │    ──▶ Validate  │
-                     │          │ + test plans │    │                  │
-                     ▼          └──────┬───────┘    └────────┬─────────┘
-               ┌──────────┐           │                      │
-               │ GATE:    │           ▼                      ▼
-               │ docs/    │    ┌──────────────┐    ┌──────────────────┐
-               │ require- │    │ GATE:        │    │ GATE:            │
-               │ ments.md │    │ docs/backlog/│    │ make ci passes   │
-               │ exists?  │    │ has stories? │    │ coverage >= 80%  │
-               └──────────┘    └──────────────┘    └────────┬─────────┘
-                                                            │
-                Phase 4          Phase 5                    │
-               ┌──────────┐    ┌───────────┐               │
-               │  /pr     │◀───│  /review  │◀──────────────┘
-               │          │    │           │
-               │ CI + push│    │ 12-point  │
-               │ + create │    │ checklist │
-               │ PR       │    │           │
-               └──────────┘    └─────┬─────┘
-                                     │
-                                     ▼
-                              ┌───────────┐
-                              │  /wrapup  │
-                              │           │
-                              │ Commit,   │
-                              │ push,     │
-                              │ handoff   │
-                              └───────────┘
+  Phase 0         Phase 0b         Phase 1          Phase 2
+ ┌────────┐    ┌───────────┐    ┌───────────┐    ┌──────────────┐
+ │/gogogo │───▶│ /spike    │───▶│/interview │───▶│ /decompose   │
+ │        │    │ (optional)│    │           │    │              │
+ │ Load   │    │ Time-boxed│    │ Gather    │    │ Break into   │
+ │ context│    │ explore   │    │ reqs      │    │ epics/stories│
+ │+ status│    │ spike/*   │    │           │    │ + dep graph  │
+ └────────┘    └───────────┘    └─────┬─────┘    └──────┬───────┘
+                                      │                  │
+                                      ▼                  ▼
+                                ┌──────────┐    ┌──────────────┐
+                                │ GATE:    │    │ GATE:        │
+                                │ docs/    │    │ docs/backlog/│
+                                │ require- │    │ has stories? │
+                                │ ments.md │    └──────┬───────┘
+                                │ exists?  │           │
+                                └──────────┘           ▼
+                                              ┌──────────────────┐
+  Phase 2b (full mode only)                   │ Architecture     │
+ ┌────────────────────────────┐               │ docs/arch...md   │
+ │ /test-plan (per story)     │◀──────────────│ docs/adr/        │
+ │                            │               └──────────────────┘
+ │ Generate for each story:   │
+ │ • Unit test cases          │
+ │ • Integration test cases   │
+ │ • E2E Playwright scenarios │
+ │ • Test data requirements   │
+ │ • Traceability matrix      │
+ │                            │
+ │ Output: docs/test-plans/   │
+ └─────────────┬──────────────┘
+               │
+               ▼
+  Phase 3                          Phase 4        Phase 5
+ ┌──────────────────────┐       ┌──────────┐   ┌───────────┐
+ │ /implement           │──────▶│  /pr     │──▶│  /review  │
+ │ (TDD per story)      │       │          │   │           │
+ │                      │       │ CI + push│   │ 12-point  │
+ │ Red ──▶ Green        │       │ + create │   │ checklist │
+ │   ──▶ Refactor       │       │ PR       │   │ + perf    │
+ │   ──▶ Validate       │       └──────────┘   └─────┬─────┘
+ │                      │                            │
+ │ GATES:               │                            ▼
+ │ • Test artifacts     │                     ┌───────────┐
+ │ • E2E scripts exist  │                     │  /wrapup  │
+ │ • Traceability ✓     │                     │           │
+ │ • make ci passes     │                     │ Commit,   │
+ │ • coverage >= 80%    │                     │ push,     │
+ └──────────────────────┘                     │ handoff   │
+                                              └───────────┘
 ```
 
 ### TDD Cycle (Per Story)
@@ -126,6 +141,111 @@ Every story goes through `/implement` which enforces Red-Green-Refactor:
                     │     coverage >= 80%/60%      │
                     └─────────────────────────────┘
 ```
+
+### Test Automation Pipeline
+
+The framework enforces a structured test pipeline that ensures every acceptance criterion is covered by tests before any code is written. This is central to the TDD workflow.
+
+#### `/test-plan` — Test Plan Generation (Full Mode Only)
+
+Before implementation begins, `/test-plan` analyzes each story and generates a comprehensive test plan at `docs/test-plans/[story-id]-test-plan.md`. The plan includes:
+
+| Section | What It Contains |
+|---------|-----------------|
+| **Unit Tests** | Test cases per acceptance criterion (happy path + edge cases + error cases) |
+| **Integration Tests** | API endpoint, service boundary, and database interaction tests |
+| **E2E Tests (Playwright)** | User journey scenarios with Playwright test skeletons (frontend/fullstack stories) |
+| **Component Tests** | React Testing Library scenarios for individual components (React stories) |
+| **Test Data** | Factory-boy factories, pytest fixtures, and seed datasets |
+| **Mocking Strategy** | What to mock at each boundary (APIs, DB, filesystem, LLM) |
+| **Traceability Matrix** | Maps every acceptance criterion to its covering test cases |
+
+In lite mode, test plans are skipped — the test-writer sub-agent works directly from acceptance criteria in the story file.
+
+#### Test Artifacts Enforced by `/implement`
+
+During the TDD cycle, `/implement` enforces that specific test artifacts are created as real code — not just documented in a plan:
+
+```
+  /implement Phase 1 (RED)
+ ┌──────────────────────────────────────────────────────────────────────┐
+ │  1. Unit tests        → tests/unit/test_<module>.py                 │
+ │  2. Integration tests → tests/integration/test_<endpoint>.py        │
+ │  3. Factories         → tests/factories.py or tests/factories/      │
+ │  4. Fixtures          → tests/conftest.py (shared) or per-file      │
+ │  5. Seed data         → tests/fixtures/ (JSON/YAML for integration) │
+ │  6. E2E scripts       → tests/e2e/test_<journey>.py (Playwright)   │
+ │  7. Component tests   → frontend/src/components/*.test.tsx           │
+ │                                                                      │
+ │  GATES (full mode):                                                  │
+ │  • Every factory/fixture in test plan must exist as code             │
+ │  • frontend/fullstack stories MUST have Playwright E2E scripts       │
+ │  • An empty tests/e2e/ directory does NOT satisfy the gate           │
+ └──────────────────────────────────────────────────────────────────────┘
+
+  /implement Phase 4 (VALIDATE)
+ ┌──────────────────────────────────────────────────────────────────────┐
+ │  Both modes:                                                         │
+ │  • Unit tests exist and pass for every new function/method           │
+ │  • Shared fixtures in conftest.py — no duplicated setup              │
+ │  • Traceability: every acceptance criterion → at least 1 passing test│
+ │                                                                      │
+ │  Full mode only:                                                     │
+ │  • Integration tests with @pytest.mark.integration                   │
+ │  • Test data artifacts (factories, fixtures, seed data) as code      │
+ │  • E2E Playwright scripts using page.goto/fill/click/expect          │
+ │  • E2E tests cover every UI-facing acceptance criterion              │
+ │  • Frontend component tests use @testing-library/react               │
+ │  • Coverage >= 80% (lite: >= 60%)                                    │
+ └──────────────────────────────────────────────────────────────────────┘
+```
+
+#### Playwright E2E Test Requirements (Full Mode)
+
+Stories tagged with `frontend` or `fullstack` expertise **must** have Playwright E2E test scripts. The framework enforces strict rules on what counts as a valid E2E test:
+
+**Valid** (tests runtime behavior):
+```python
+@pytest.mark.e2e
+async def test_user_login_with_valid_credentials(page: Page):
+    await page.goto(f"{BASE_URL}/login")
+    await page.fill("[data-testid=email]", "user@example.com")
+    await page.click("[data-testid=submit]")
+    await expect(page.locator("[data-testid=dashboard]")).to_be_visible()
+```
+
+**Banned** (static file analysis):
+```python
+# BANNED — reads source code instead of testing behavior
+def test_component_uses_abort_signal():
+    source = Path("frontend/src/App.tsx").read_text()
+    assert "AbortSignal" in source
+```
+
+The Playwright MCP server is pre-configured in `.mcp.json` for selector validation and interactive testing.
+
+#### Traceability Enforcement
+
+Every acceptance criterion in a story must map to at least one passing test. `/implement` Phase 4 validates this before allowing `/pr`:
+
+```
+Acceptance Criteria → Test Coverage:
+  AC-1: UT-001, UT-002, IT-001, E2E-001  ✓
+  AC-2: UT-003, IT-002                    ✓
+  AC-3: UT-004, E2E-002                   ✓
+  AC-4: (no tests)                        ✗ ← BLOCKS PR
+```
+
+If any criterion has zero tests, implementation is blocked until coverage is added.
+
+#### Test-Writer Sub-Agent
+
+The `test-writer` sub-agent is spawned during `/implement` Phase 1 (RED) to write failing tests. It reads:
+- The story's acceptance criteria
+- The test plan (full mode) or works directly from the story (lite mode)
+- Existing `tests/conftest.py` for shared fixtures
+
+It produces unit tests, integration tests, and E2E scripts that all **fail** (no implementation exists yet). This ensures tests are written first and drive the implementation.
 
 ### Parallel Implementation (Agent Teams)
 
@@ -494,15 +614,21 @@ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 Stories are implemented one at a time. This is the simplest and most stable workflow.
 
 ```
-/interview                              # 1. Gather requirements
-/decompose docs/requirements.md         # 2. Break into stories + dependency graph
-/implement docs/backlog/<story>.md      # 3. TDD: Red -> Green -> Refactor
-/pr                                     # 4. Run CI + create pull request
-/review 42                              # 5. Review PR #42
-/wrapup                                 # 6. Commit, push, handoff summary
+/gogogo                                 # 1. Session startup: load context, check git status
+/spike "evaluate auth library"          # 2. (Optional) Time-boxed exploration
+/interview                              # 3. Gather structured requirements → docs/requirements.md
+/decompose docs/requirements.md         # 4. Break into epics, stories, dep graph, test plans
+                                        #    (full mode also generates architecture + ADRs + test plans)
+/test-plan docs/backlog/<story>.md      # 5. (Full mode) Generate test plan per story → docs/test-plans/
+/implement docs/backlog/<story>.md      # 6. TDD: Red → Green → Refactor → Validate
+/pr                                     # 7. Run CI + create pull request
+/review 42                              # 8. Review PR #42 against 12-point checklist
+/wrapup                                 # 9. Commit, push, handoff summary
 ```
 
 Each story goes through the full TDD cycle (Red -> Green -> Refactor -> Validate). The next story only starts after the current one passes CI.
+
+**Note**: In full mode, `/decompose` auto-generates test plans via `/test-plan` for every story. You only need to run `/test-plan` manually if you add stories later.
 
 ### Mode 2: Manual Parallel (`/parallel-manual`)
 
@@ -632,6 +758,7 @@ tests/                                   # Test directories with markers
     pr.md                                # /pr — Create pull request
     review.md                            # /review — 12-point quality review
     diagnose.md                          # /diagnose — Failure diagnosis + hotfix
+    spike.md                             # /spike — Time-boxed exploration (spike/* branch)
     wrapup.md                            # /wrapup — Session completion ceremony
     create-prompt.md                     # /create-prompt — R.G.C.O.A. prompt builder
   hooks/
@@ -645,6 +772,7 @@ tests/                                   # Test directories with markers
   agents/
     test-writer.yaml                     # TDD Red phase: writes failing tests
     code-reviewer.yaml                   # 12-point quality checklist
+    performance-reviewer.yaml            # 10-point performance checklist
     architect.yaml                       # ADRs, C4 diagrams, tech evaluation
   skills/
     api-design/SKILL.md                  # REST conventions, Pydantic schemas
@@ -683,7 +811,8 @@ The template uses a layered approach — each layer catches different issues at 
 | **Rules** | BAD/GOOD examples for security, code style, error handling, testing, git, React | Auto-loaded by file path |
 | **CLAUDE.md** | Standards, mode enforcement, dependency rules, Pre-Completion Checklists | Read every session |
 | **Commands** | Slash commands for sequential and parallel SDLC workflows | Invoked by user |
-| **Agents** | Specialized sub-agents (test-writer, code-reviewer, architect) | Called by commands |
+| **Test Plans** | Test cases, data requirements, E2E scenarios, traceability (full mode) | Generated by `/test-plan` |
+| **Agents** | Specialized sub-agents (test-writer, code-reviewer, performance-reviewer, architect) | Called by commands |
 | **Skills** | Domain knowledge (API design, DB patterns, deployment, etc.) | Referenced as needed |
 
 ### Precedence (when rules conflict)
